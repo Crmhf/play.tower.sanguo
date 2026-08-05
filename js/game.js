@@ -6,9 +6,13 @@ class Game {
     this.levelIdx = levelIdx;
     this.level = LEVELS[levelIdx];
 
-    // 资源
-    this.gold = this.level.startGold;
-    this.lives = this.level.startLives;
+    // 科技树加成
+    this.tech = Tech.mods();
+
+    // 资源（应用科技）
+    this.gold = this.level.startGold + this.tech.startGold;
+    this.lives = Math.round(this.level.startLives * (1 + this.tech.livesMult));
+    this.maxLives = this.lives;
     this.passive = this.hero.passive;
 
     // 状态
@@ -204,9 +208,12 @@ class Game {
 
   _towerStats(def, lvl) {
     const s = def.levels[lvl];
-    let dmg = s.damage * (1 + (this.passive.damage || 0));
-    let rate = s.rate * (1 + (this.passive.attackSpeed || 0));
-    return { damage: dmg, range: s.range, rate, slow: s.slow, slowTime: s.slowTime };
+    let dmg = s.damage * (1 + (this.passive.damage || 0) + this.tech.damage);
+    let rate = s.rate * (1 + (this.passive.attackSpeed || 0) + this.tech.attackSpeed);
+    let range = s.range * (1 + (this.passive.range || 0));
+    return { damage: dmg, range, rate, slow: s.slow, slowTime: s.slowTime,
+             splash: def.splash ? def.splash * (1 + (this.passive.splash || 0)) : 0,
+             pierce: (def.pierce || 0) + this.tech.pierce };
   }
 
   upgradeTower(slot) {
@@ -286,47 +293,82 @@ class Game {
       hp, maxHp: hp, speed: def.speed, armor: def.armor,
       seg: 0, dist: 0, x: start.x, y: start.y,
       slowFactor: 1, slowT: 0, burnT: 0, burnDps: 0, stunT: 0,
+      poisonT: 0, poisonDps: 0, fearT: 0, charmT: 0,
+      healTick: 0, summonTick: 0, regen: def.regen || 0,
+      stealth: def.stealth || false,
       wob: Math.random() * Math.PI * 2, dead: false
     });
+    if (def.stealth) mesh.material.opacity = 0.35;
   }
 
   // ---------- 技能 ----------
   castSkill() {
     if (this.skillCd > 0 || this.enemies.length === 0) return;
     const sk = this.hero.skill;
-    const cdMul = 1 - (this.passive.cooldown || 0);
+    const cdMul = 1 - Math.min(0.6, (this.passive.cooldown || 0) + this.tech.cooldown);
     this.skillCd = sk.cd * cdMul;
     AudioMan.play(sk.sfx, 0.8);
-    this.shake = Math.max(this.shake, 14);
-
     const cx = CANVAS_W / 2, cy = CANVAS_H / 2;
     const tex = Assets.tex(sk.effectImg);
 
-    if (sk.type === 'dragon') {
-      // 直线贯穿
-      this._skillSprite(tex, cx, cy, 500, 90, sk.color);
-      this.enemies.forEach(e => this._damage(e, sk.damage, { knock: 30 }));
-    } else if (sk.type === 'blade') {
-      this._skillSprite(tex, cx, cy, 560, 560, sk.color);
-      this.enemies.forEach(e => { this._damage(e, sk.damage); e.stunT = Math.max(e.stunT, sk.stun); });
-    } else if (sk.type === 'fire') {
-      this._skillSprite(tex, cx, cy, 420, 420, sk.color);
-      this.enemies.forEach(e => { this._damage(e, sk.damage); e.burnT = sk.burn; e.burnDps = sk.damage / sk.burn; this._slow(e, sk.slow, sk.burn); });
-    } else if (sk.type === 'smash') {
-      // 找最密集点
-      let best = this.enemies[0], mx = -1;
-      this.enemies.forEach(e => {
-        const near = this.enemies.filter(o => Math.hypot(o.x - e.x, o.y - e.y) < 160).length;
-        if (near > mx) { mx = near; best = e; }
-      });
-      this._skillSprite(tex, best.x, best.y, 380, 380, sk.color);
-      this._burst(best.x, best.y, sk.color, 30);
-      this.enemies.forEach(e => {
-        if (Math.hypot(e.x - best.x, e.y - best.y) < 190) this._damage(e, sk.damage, { knock: 50 });
-      });
-      this.shake = 22;
+    switch (sk.type) {
+      case 'execute': {  // 关羽 武圣斩：最强敌 3 倍
+        const t = this._strongest(); if (!t) break;
+        this._skillSprite(tex, t.x, t.y, 220, 220, sk.color);
+        this._damage(t, t.maxHp * 0.5 + 100);
+        this.shake = 12; break;
+      }
+      case 'roar': {     // 张飞 咆哮：推退+恐惧
+        this._skillSprite(tex, cx, cy, 480, 480, sk.color);
+        this.enemies.forEach(e => { e.dist = Math.max(0, e.dist - sk.knock); e.fearT = sk.fear; });
+        this.shake = 16; break;
+      }
+      case 'dragon': {   // 赵云 龙胆：直线贯穿
+        this._skillSprite(tex, cx, cy, 520, 90, sk.color);
+        this.enemies.forEach(e => this._damage(e, sk.damage, { knock: 30 }));
+        this.shake = 14; break;
+      }
+      case 'snipe': {    // 黄忠 百步穿杨：必杀最强
+        const t = this._strongest(); if (!t) break;
+        this._skillSprite(tex, t.x, t.y, 200, 200, sk.color);
+        this._damage(t, t.hp + 9999);
+        this.shake = 8; break;
+      }
+      case 'starfall': { // 诸葛亮 观星：清屏
+        this._skillSprite(tex, cx, cy, 560, 560, sk.color);
+        for (let i = 0; i < 40; i++) this._particle(Math.random()*CANVAS_W, Math.random()*CANVAS_H, sk.color);
+        this.enemies.forEach(e => this._damage(e, sk.damage));
+        this.shake = 18; break;
+      }
+      case 'soul': {     // 司马懿 噬魂：中毒 DoT
+        this._skillSprite(tex, cx, cy, 420, 420, sk.color);
+        this.enemies.forEach(e => { this._damage(e, sk.damage); e.poisonT = sk.dot; e.poisonDps = sk.damage / sk.dot * 0.8; });
+        this.shake = 10; break;
+      }
+      case 'charm': {    // 貂蝉 离间：自相残杀
+        this._skillSprite(tex, cx, cy, 440, 440, sk.color);
+        this.enemies.forEach(e => { e.charmT = sk.duration; });
+        this.shake = 8; break;
+      }
+      case 'smash': {    // 吕布 方天：最密集点毁灭
+        let best = this.enemies[0], mx = -1;
+        this.enemies.forEach(e => {
+          const near = this.enemies.filter(o => Math.hypot(o.x - e.x, o.y - e.y) < 160).length;
+          if (near > mx) { mx = near; best = e; }
+        });
+        this._skillSprite(tex, best.x, best.y, 380, 380, sk.color);
+        this._burst(best.x, best.y, sk.color, 30);
+        this.enemies.forEach(e => { if (Math.hypot(e.x - best.x, e.y - best.y) < 190) this._damage(e, sk.damage, { knock: 50 }); });
+        this.shake = 22; break;
+      }
     }
     this._updateHud();
+  }
+
+  _strongest() {
+    let best = null, mx = -1;
+    this.enemies.forEach(e => { if (!e.dead && e.hp > mx) { mx = e.hp; best = e; } });
+    return best;
   }
 
   _skillSprite(tex, x, y, w, h, color) {
@@ -365,7 +407,8 @@ class Game {
         this._win();
       } else {
         this.state = 'build';
-        this.gold += 30 + this.waveIdx * 5;
+        this.gold += 30 + this.waveIdx * 5 + this.tech.interest;
+        this.lives = Math.min(this.maxLives, this.lives + this.tech.regen);
         UI.setWaveBtn(true);
         UI.toast('本波已清剿，整备后继续');
       }
@@ -381,16 +424,50 @@ class Game {
   _updateEnemies(dt) {
     for (const e of this.enemies) {
       if (e.dead) continue;
-      // 灼烧
+      // 持续伤害：灼烧 + 中毒
       if (e.burnT > 0) { e.burnT -= dt; this._damage(e, e.burnDps * dt, { silent: true }); if (Math.random() < dt * 6) this._particle(e.x, e.y, 0xff7030); }
+      if (e.poisonT > 0) { e.poisonT -= dt; this._damage(e, e.poisonDps * dt, { silent: true }); if (Math.random() < dt * 4) this._particle(e.x, e.y, 0xa04ad8); }
       if (e.dead) continue;
+      // Boss 回血
+      if (e.regen > 0) e.hp = Math.min(e.maxHp, e.hp + e.regen * dt);
+      // 治疗兵 / 妖术师：治疗周围友军
+      if (e.def.heal) {
+        e.healTick -= dt;
+        if (e.healTick <= 0) {
+          e.healTick = 1.0;
+          this.enemies.forEach(o => {
+            if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 120) {
+              o.hp = Math.min(o.maxHp, o.hp + e.def.heal);
+              this._particle(o.x, o.y, 0x4ad88a);
+            }
+          });
+        }
+      }
+      // 召唤者：周期召唤小怪
+      if (e.def.summon) {
+        e.summonTick -= dt;
+        if (e.summonTick <= 0 && this.enemies.length < 120) {
+          e.summonTick = 4.0;
+          const s = { ...this._spawnAt(e.def.summon, e.seg, e.dist) };
+        }
+      }
       // 减速
       if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowFactor = 1; }
-      // 眩晕
+      // 恐惧 / 眩晕：原地不动
       if (e.stunT > 0) { e.stunT -= dt; continue; }
+      if (e.fearT > 0) { e.fearT -= dt; continue; }
+      // 魅惑：自相残杀（攻击最近的友军）
+      if (e.charmT > 0) {
+        e.charmT -= dt;
+        let tgt = null, md = 1e9;
+        this.enemies.forEach(o => { if (!o.dead && o !== e) { const d = Math.hypot(o.x-e.x, o.y-e.y); if (d < md) { md = d; tgt = o; } } });
+        if (tgt && md < 60) this._damage(tgt, 30 * dt * 5, { silent: true });
+        continue; // 魅惑时不前进
+      }
 
       // 沿路径移动
-      const sp = e.speed * e.slowFactor;
+      const chargeMul = (e.def.charge && e.hp < e.maxHp * 0.5) ? 2.2 : 1; // 吕布半血冲撞
+      const sp = e.speed * e.slowFactor * chargeMul;
       let move = sp * dt;
       while (move > 0 && e.seg < this.path.length - 1) {
         const a = this.path[e.seg], b = this.path[e.seg + 1];
@@ -405,12 +482,13 @@ class Game {
       const t = e.dist / segLen;
       e.x = a.x + (b.x - a.x) * t;
       e.y = a.y + (b.y - a.y) * t;
-      // 朝向 + 行走摆动
+      // 行走摆动
       e.wob += dt * 10;
       e.mesh.position.set(e.x, e.y + Math.sin(e.wob) * 2, 2);
-      e.mesh.rotation.z = Math.atan2(b.y - a.y, b.x - a.x) * 0; // 保持直立
       const face = (b.x - a.x) < 0 ? -1 : 1;
       e.mesh.scale.x = face;
+      // 隐身透明度呼吸
+      if (e.stealth) e.mesh.material.opacity = 0.25 + Math.abs(Math.sin(this.time * 3)) * 0.2;
       if (e.hpBar) {
         e.hpBar.position.set(e.x, e.y + e.def.size / 2 + 6, 3);
         const ratio = Math.max(0, e.hp / e.maxHp);
@@ -426,6 +504,14 @@ class Game {
       }
       return true;
     });
+  }
+
+  // 在指定路径位置召唤（供召唤者用）
+  _spawnAt(typeId, seg, dist) {
+    this._spawn(typeId);
+    const ne = this.enemies[this.enemies.length - 1];
+    ne.seg = seg; ne.dist = Math.max(0, dist - 20);
+    return ne;
   }
 
   _reachBase(e) {
@@ -462,8 +548,9 @@ class Game {
   }
 
   _fire(t, target) {
-    const crit = Math.random() < (this.passive.crit || 0);
-    const dmg = t.damage * (crit ? 2 : 1);
+    const crit = Math.random() < ((this.passive.crit || 0) + this.tech.crit);
+    let dmg = t.damage * (crit ? 2 : 1);
+    if (t.def.bossKiller && target.def.boss) dmg *= 2;   // 召唤塔克 Boss
     const m = new THREE.Mesh(
       new THREE.CircleGeometry(5, 8),
       new THREE.MeshBasicMaterial({ color: t.def.projColor })
@@ -472,8 +559,9 @@ class Game {
     this.scene.add(m);
     this.projectiles.push({
       mesh: m, target, x: t.slot.x, y: t.slot.y,
-      speed: 420, dmg, splash: t.def.splash || 0,
-      slow: t.slow, slowTime: t.slowTime, color: t.def.projColor
+      speed: 460, dmg, splash: t.splash || 0,
+      slow: t.slow, slowTime: t.slowTime, color: t.def.projColor,
+      poison: !!this.passive.poison   // 司马懿被动：魔法塔附带中毒
     });
     AudioMan.play('whoosh', 0.15);
   }
@@ -497,6 +585,7 @@ class Game {
           this._damage(p.target, p.dmg);
           this._particle(p.target.x, p.target.y, p.color);
           if (p.slow) this._slow(p.target, p.slow, p.slowTime);
+          if (p.poison && !p.target.dead) { p.target.poisonT = 3; p.target.poisonDps = p.dmg * 0.3; }
           AudioMan.play('hit', 0.2);
         }
         p._remove = true;
@@ -526,7 +615,7 @@ class Game {
     setTimeout(() => { if (e.mesh && !e.dead) e.mesh.material.color.setHex(0xffffff); }, 40);
     if (e.hp <= 0) {
       e.dead = true; e._remove = true;
-      this.gold += e.def.reward;
+      this.gold += Math.round(e.def.reward * (1 + this.tech.goldMult));
       this._burst(e.x, e.y, e.def.color, e.def.boss ? 40 : 12);
       if (e.def.boss) { this.shake = 20; AudioMan.play('skill_ultimate', 0.6); }
       else AudioMan.play('die', 0.25);

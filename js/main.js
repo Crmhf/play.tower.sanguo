@@ -100,8 +100,8 @@ const App = {
     };
 
     this.last = performance.now();
-    cancelAnimationFrame(this.raf);
-    const loop = (t) => {
+    this._stopLoop();
+    const step = (t) => {
       const dt = Math.min((t - this.last) / 1000, 0.05);
       this.last = t;
       if (this.game && (this.game.state === 'build' || this.game.state === 'wave')) {
@@ -110,13 +110,20 @@ const App = {
       } else if (this.game) {
         this.game.update(0); // 仍渲染结算画面
       }
-      this.raf = requestAnimationFrame(loop);
     };
+    // requestAnimationFrame 驱动（流畅），setInterval 兜底（标签页后台/被节流时仍推进）
+    const loop = (t) => { step(t); this.raf = requestAnimationFrame(loop); };
     this.raf = requestAnimationFrame(loop);
+    this.timer = setInterval(() => { if (document.hidden) step(performance.now()); }, 33);
+  },
+
+  _stopLoop() {
+    cancelAnimationFrame(this.raf);
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
   },
 
   quitBattle() {
-    cancelAnimationFrame(this.raf);
+    this._stopLoop();
     if (this.game && this.game.state === 'won') {
       // 解锁下一关
       const nl = this.game.level.level + 1;

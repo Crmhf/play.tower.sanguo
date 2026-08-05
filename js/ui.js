@@ -84,6 +84,35 @@ const UI = {
       ? `你守住了 ${g.level.name}！` : '敌军攻破了防线…';
     const next = document.getElementById('result-next');
     next.style.display = (won && g.levelIdx < LEVELS.length - 1) ? 'inline-block' : 'none';
+
+    // 通关奖励科技点 → 3 选 1
+    const techBox = document.getElementById('tech-choice');
+    if (won) {
+      Tech.addPoint();
+      const choices = Tech.choices();
+      if (choices.length) {
+        techBox.innerHTML = '<div class="tech-title">⭐ 获得科技点 · 三选一强化</div>';
+        const row = document.createElement('div');
+        row.className = 'tech-row';
+        choices.forEach(t => {
+          const b = document.createElement('button');
+          b.className = 'tech-card';
+          b.innerHTML = `<div class="tc-cat">${t.cat}</div><div class="tc-name">${t.name}</div>`;
+          b.onclick = () => {
+            Tech.pick(t.id);
+            techBox.innerHTML = `<div class="tech-done">已选择：${t.name}</div>`;
+          };
+          row.appendChild(b);
+        });
+        techBox.appendChild(row);
+        techBox.style.display = 'block';
+      } else {
+        techBox.innerHTML = '<div class="tech-done">科技已全部点满！</div>';
+        techBox.style.display = 'block';
+      }
+    } else {
+      techBox.style.display = 'none';
+    }
     r.classList.add('show');
   }
 };

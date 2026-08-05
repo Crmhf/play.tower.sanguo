@@ -1,43 +1,54 @@
-// 防御塔定义：4 种塔 × 3 级
+// 5 类防御塔（与武将对应）× 3 星
+// 1★基础 → 2★解锁技能强化 → 3★数值翻倍
 const TOWERS = {
-  arrow: {
-    id: 'arrow', name: '连弩塔', img: 'assets/img/towers/arrow.png',
-    color: '#ffd27f', projColor: 0xffe08a, cost: 100,
-    desc: '快速单体箭矢，射程远。',
-    levels: [
-      { damage: 22,  range: 150, rate: 1.4, cost: 0 },
-      { damage: 40,  range: 165, rate: 1.6, cost: 80 },
-      { damage: 70,  range: 185, rate: 1.9, cost: 160 }
+  melee: {   // 近战塔：关羽/张飞，克步兵/盾兵
+    id:'melee', name:'近战塔', img:'assets/img/towers/arrow.png',
+    color:'#7ee08a', projColor:0x8affa0, cost:150, splash:30,
+    desc:'近战高伤，克步兵盾兵。',
+    levels:[
+      { damage:30, range:95,  rate:1.1, cost:0 },
+      { damage:55, range:100, rate:1.2, cost:250 },
+      { damage:110,range:110, rate:1.35,cost:600 }
     ]
   },
-  mage: {
-    id: 'mage', name: '符法塔', img: 'assets/img/towers/mage.png',
-    color: '#c9a7ff', projColor: 0xb98cff, cost: 140, splash: 45,
-    desc: '法术弹小范围溅射，克制成群敌人。',
-    levels: [
-      { damage: 34,  range: 135, rate: 0.9, cost: 0 },
-      { damage: 60,  range: 145, rate: 1.0, cost: 120 },
-      { damage: 105, range: 160, rate: 1.1, cost: 220 }
+  range: {   // 远程塔：黄忠/赵云，克弓兵/投石车
+    id:'range', name:'远程塔', img:'assets/img/towers/mage.png',
+    color:'#7fd4ff', projColor:0x9fdcff, cost:200, pierce:1,
+    desc:'远程穿透，射程远。',
+    levels:[
+      { damage:26, range:180, rate:1.3, cost:0 },
+      { damage:48, range:200, rate:1.45,cost:300 },
+      { damage:95, range:230, rate:1.6, cost:700 }
     ]
   },
-  cannon: {
-    id: 'cannon', name: '火炮塔', img: 'assets/img/towers/cannon.png',
-    color: '#ff9a5b', projColor: 0xff7b3a, cost: 180, splash: 70,
-    desc: '范围爆炸，高 AOE，对重甲有效。',
-    levels: [
-      { damage: 55,  range: 120, rate: 0.5, cost: 0 },
-      { damage: 95,  range: 128, rate: 0.55, cost: 150 },
-      { damage: 165, range: 140, rate: 0.6, cost: 280 }
+  magic: {   // 魔法塔：诸葛亮/司马懿，全场AOE
+    id:'magic', name:'魔法塔', img:'assets/img/towers/cannon.png',
+    color:'#c9a7ff', projColor:0xb98cff, cost:300, splash:55,
+    desc:'法术溅射，全场 AOE。',
+    levels:[
+      { damage:38, range:150, rate:0.9, cost:0 },
+      { damage:70, range:160, rate:1.0, cost:400 },
+      { damage:140,range:175, rate:1.1, cost:900 }
     ]
   },
-  frost: {
-    id: 'frost', name: '寒冰塔', img: 'assets/img/towers/frost.png',
-    color: '#8fd8ff', projColor: 0x9fe0ff, cost: 120, slow: 0.45,
-    desc: '减速冰晶，为其他塔争取输出时间。',
-    levels: [
-      { damage: 12, range: 130, rate: 1.0, slow: 0.35, slowTime: 1.2, cost: 0 },
-      { damage: 20, range: 140, rate: 1.0, slow: 0.45, slowTime: 1.6, cost: 100 },
-      { damage: 32, range: 155, rate: 1.1, slow: 0.55, slowTime: 2.0, cost: 180 }
+  support: { // 辅助塔：貂蝉，减速/控制
+    id:'support', name:'辅助塔', img:'assets/img/towers/frost.png',
+    color:'#ff9ecf', projColor:0xffb0d8, cost:180, slow:0.4,
+    desc:'魅惑减速，为友军争取输出。',
+    levels:[
+      { damage:12, range:140, rate:1.0, slow:0.35, slowTime:1.4, cost:0 },
+      { damage:20, range:150, rate:1.05,slow:0.45, slowTime:1.8, cost:280 },
+      { damage:36, range:165, rate:1.1, slow:0.55, slowTime:2.2, cost:650 }
+    ]
+  },
+  summon: {  // 召唤塔：吕布，克Boss
+    id:'summon', name:'召唤塔', img:'assets/img/towers/cannon.png',
+    color:'#ff6b6b', projColor:0xff8080, cost:500, bossKiller:true,
+    desc:'召唤分身，对 Boss 特效。',
+    levels:[
+      { damage:60, range:130, rate:0.7, cost:0 },
+      { damage:110,range:140, rate:0.8, cost:500 },
+      { damage:220,range:155, rate:0.9, cost:1200 }
     ]
   }
 };
