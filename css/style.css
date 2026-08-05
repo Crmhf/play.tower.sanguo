@@ -1,0 +1,102 @@
+/* 三国塔防 · 全局样式 */
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFang SC","Microsoft YaHei",serif; overflow:hidden; }
+#app { height:100vh; }
+
+.screen { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; overflow:auto; }
+.screen.active { display:flex; }
+
+/* ---------- 主菜单 ---------- */
+.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.jpg') center/cover; filter:brightness(.55); z-index:-1; }
+#screen-menu { justify-content:center; }
+.game-title { font-size:88px; letter-spacing:12px; color:#ffd98a; text-shadow:0 0 30px #ff8c00,0 4px 8px #000; font-weight:900; }
+.game-sub { letter-spacing:6px; color:#c9b48a; margin:14px 0 40px; }
+.big-btn { background:linear-gradient(180deg,#e8a93a,#b06a12); border:2px solid #ffd98a; color:#fff8ea; font-size:24px; padding:14px 54px; border-radius:10px; cursor:pointer; box-shadow:0 0 24px rgba(255,150,40,.5); transition:.2s; }
+.big-btn:hover { transform:scale(1.06); box-shadow:0 0 36px rgba(255,170,60,.8); }
+.menu-tip { margin-top:26px; color:#a89a7a; font-size:14px; }
+.mute-btn { position:absolute; top:18px; right:18px; font-size:24px; background:rgba(0,0,0,.4); border:1px solid #665; border-radius:8px; padding:6px 12px; cursor:pointer; }
+
+#loading { text-align:center; }
+.load-track { width:340px; height:14px; background:#222; border:1px solid #665; border-radius:8px; overflow:hidden; margin-bottom:14px; }
+#load-bar { height:100%; width:0; background:linear-gradient(90deg,#ffb347,#ff7b00); transition:width .2s; }
+.hide { display:none !important; }
+
+/* ---------- 选将 ---------- */
+.screen-title { font-size:40px; color:#ffd98a; margin:36px 0 24px; letter-spacing:6px; text-shadow:0 2px 8px #000; }
+#hero-list { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; padding:0 30px 50px; }
+.hero-card { width:250px; background:linear-gradient(180deg,#1c2333,#12161f); border:1px solid #4a4030; border-radius:14px; padding:16px; text-align:center; transition:.2s; }
+.hero-card:hover { transform:translateY(-6px); border-color:#ffd98a; box-shadow:0 8px 30px rgba(255,170,60,.25); }
+.hero-card img { width:100%; height:220px; object-fit:cover; border-radius:10px; background:#000; }
+.hc-name { font-size:24px; font-weight:700; margin:12px 0 6px; }
+.hc-desc { font-size:13px; color:#b9ad8f; min-height:36px; }
+.hc-skill { font-size:12px; color:#ffd98a; margin:8px 0; min-height:48px; }
+.hc-passive { font-size:12px; color:#8fd8ff; margin-bottom:10px; }
+.hc-btn { background:linear-gradient(180deg,#3a7bd5,#1f4e8a); border:1px solid #7fb6ff; color:#fff; padding:9px 26px; border-radius:8px; cursor:pointer; font-size:15px; }
+.hc-btn:hover { filter:brightness(1.2); }
+
+/* ---------- 选关 ---------- */
+.levels-hero { color:#c9b48a; margin-bottom:20px; }
+#level-grid { display:grid; grid-template-columns:repeat(10,58px); gap:10px; padding:0 20px 50px; }
+.level-cell { width:58px; height:58px; font-size:18px; font-weight:700; background:#1c2333; border:1px solid #4a4030; border-radius:10px; color:#ffd98a; cursor:pointer; transition:.15s; }
+.level-cell:hover:not(.locked) { transform:scale(1.12); border-color:#ffd98a; background:#2a3348; }
+.level-cell.locked { color:#555; cursor:not-allowed; background:#14171f; }
+.level-cell.boss { border-color:#ff5b5b; color:#ff8a8a; }
+
+/* ---------- 战斗 HUD ---------- */
+#hud { width:100%; display:flex; align-items:center; gap:22px; padding:10px 18px; background:rgba(10,12,20,.85); border-bottom:1px solid #3a3120; font-size:17px; z-index:5; }
+.hud-item b { color:#ffd98a; }
+.hud-spacer { flex:1; }
+.hud-btn { background:#2a3348; border:1px solid #667; color:#fff; padding:6px 14px; border-radius:8px; cursor:pointer; }
+.hud-btn:hover { background:#3a4560; }
+
+#stage-wrap { position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:#000; overflow:hidden; }
+#stage { position:relative; line-height:0; }
+#stage canvas { border:1px solid #3a3120; border-radius:6px; max-width:100%; max-height:100%; }
+
+#toast { position:absolute; top:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.75); border:1px solid #ffd98a; color:#ffd98a; padding:8px 22px; border-radius:20px; opacity:0; transition:.3s; pointer-events:none; z-index:9; }
+#toast.show { opacity:1; }
+
+/* 技能按钮 */
+#skill-btn { position:absolute; right:22px; bottom:22px; width:78px; height:78px; border-radius:50%; border:3px solid #ffd98a; background:#222; cursor:pointer; z-index:8; overflow:hidden; box-shadow:0 0 18px rgba(255,170,60,.6); }
+#skill-btn .sk-icon { position:absolute; inset:6px; border-radius:50%; }
+#skill-btn .cd-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:900; color:#fff; text-shadow:0 0 8px #000; background:rgba(0,0,0,.55); border-radius:50%; }
+#skill-btn:not(.cooling) .cd-text { display:none; }
+#skill-btn.cooling { border-color:#666; }
+#skill-btn:not(.cooling):hover { transform:scale(1.1); }
+#skill-name { position:absolute; right:22px; bottom:106px; width:78px; text-align:center; font-size:12px; color:#ffd98a; z-index:8; }
+
+/* 出兵 */
+.wave-btn { position:absolute; left:22px; bottom:22px; background:linear-gradient(180deg,#c94f4f,#7a1f1f); border:2px solid #ff8a8a; color:#fff; font-size:18px; padding:12px 30px; border-radius:10px; cursor:pointer; z-index:8; }
+.wave-btn:disabled { opacity:.45; cursor:default; }
+.wave-btn:not(:disabled):hover { filter:brightness(1.25); }
+
+/* 建造轮盘 */
+#build-wheel { position:absolute; display:none; gap:8px; transform:translate(-50%,-50%); z-index:10; }
+#build-wheel.show { display:flex; }
+.wheel-item { width:78px; background:rgba(15,18,28,.95); border:1px solid #6a5a35; border-radius:10px; padding:6px; text-align:center; cursor:pointer; }
+.wheel-item:hover { border-color:#ffd98a; }
+.wheel-item.disabled { opacity:.4; cursor:not-allowed; }
+.wheel-item img { width:52px; height:52px; object-fit:cover; border-radius:6px; background:#000; }
+.wi-name { font-size:12px; color:#ffd98a; }
+.wi-cost { font-size:11px; color:#c9b48a; }
+
+/* 升级面板 */
+#upgrade-panel { position:absolute; right:16px; top:60px; width:210px; display:none; background:rgba(15,18,28,.96); border:1px solid #6a5a35; border-radius:12px; padding:16px; z-index:10; }
+#upgrade-panel.show { display:block; }
+.up-title { font-size:18px; color:#ffd98a; margin-bottom:8px; }
+.up-stat { font-size:12px; color:#b9ad8f; margin-bottom:12px; }
+.up-btn { width:100%; background:linear-gradient(180deg,#3a7bd5,#1f4e8a); border:1px solid #7fb6ff; color:#fff; padding:9px; border-radius:8px; cursor:pointer; margin-bottom:8px; }
+.sell-btn { width:100%; background:#4a3030; border:1px solid #a06a6a; color:#ffb0b0; padding:8px; border-radius:8px; cursor:pointer; }
+.up-max { text-align:center; color:#8fd8ff; margin-bottom:10px; }
+
+/* 结算 */
+#result { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.7); z-index:20; }
+#result.show { display:flex; }
+.result-box { text-align:center; background:linear-gradient(180deg,#1c2333,#12161f); border:2px solid #6a5a35; border-radius:18px; padding:44px 60px; }
+#result-title { font-size:44px; margin-bottom:12px; }
+#result-title.win { color:#ffd98a; text-shadow:0 0 24px #ff8c00; }
+#result-title.lose { color:#ff6b6b; }
+#result-sub { color:#c9b48a; margin-bottom:26px; }
+.result-btns { display:flex; gap:14px; justify-content:center; }
+.mid-btn { background:#2a3348; border:1px solid #667; color:#fff; padding:12px 26px; border-radius:10px; cursor:pointer; font-size:16px; }
+.mid-btn:hover { background:#3a4560; }

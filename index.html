@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国塔防 · Tower of Three Kingdoms</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- 主菜单 -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-bg"></div>
+    <div id="loading"><div class="load-track"><div id="load-bar"></div></div><p>正在调兵遣将…</p></div>
+    <div id="menu-inner" class="hide">
+      <h1 class="game-title">三国塔防</h1>
+      <p class="game-sub">TOWER OF THREE KINGDOMS</p>
+      <button id="btn-start" class="big-btn">进入乱世</button>
+      <p class="menu-tip">50 关史诗战役 · 四名将专属技能 · 可建造升级防御塔</p>
+    </div>
+    <button id="btn-mute" class="mute-btn">🔊</button>
+  </section>
+
+  <!-- 选将 -->
+  <section id="screen-heroes" class="screen">
+    <h2 class="screen-title">选择出战武将</h2>
+    <div id="hero-list"></div>
+  </section>
+
+  <!-- 选关 -->
+  <section id="screen-levels" class="screen">
+    <h2 class="screen-title">选择关卡</h2>
+    <p id="levels-hero" class="levels-hero"></p>
+    <div id="level-grid"></div>
+  </section>
+
+  <!-- 战斗 -->
+  <section id="screen-battle" class="screen">
+    <div id="hud">
+      <span class="hud-item" id="hud-level">第 1 关</span>
+      <span class="hud-item">💰 <b id="hud-gold">0</b></span>
+      <span class="hud-item">❤️ <b id="hud-lives">0</b></span>
+      <span class="hud-item">🌊 <b id="hud-wave">0/0</b></span>
+      <span class="hud-spacer"></span>
+      <button id="speed-btn" class="hud-btn">×1</button>
+      <button id="quit-btn" class="hud-btn">退出</button>
+    </div>
+
+    <div id="stage-wrap">
+      <div id="stage"></div>
+      <div id="toast"></div>
+
+      <div id="skill-btn"><div class="sk-icon"></div><div class="cd-text"></div></div>
+      <div id="skill-name"></div>
+
+      <div id="build-wheel"></div>
+      <div id="upgrade-panel"></div>
+
+      <button id="wave-btn" class="wave-btn">▶ 出兵</button>
+
+      <div id="result">
+        <div class="result-box">
+          <h2 id="result-title"></h2>
+          <p id="result-sub"></p>
+          <div class="result-btns">
+            <button id="result-next" class="big-btn">下一关 ▶</button>
+            <button id="result-retry" class="mid-btn">再战</button>
+            <button id="result-menu" class="mid-btn">返回</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="js/heroes.js"></script>
+<script src="js/towers.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
