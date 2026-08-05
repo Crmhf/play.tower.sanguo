@@ -386,7 +386,8 @@ class Game {
   _toWorld(e) {
     const r = this.renderer.domElement.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width * CANVAS_W;
-    const y = (e.clientY - r.top) / r.height * CANVAS_H;
+    // 相机为 y 朝上的世界系（top=CANVAS_H，y=0 在屏幕底部），屏幕 clientY 需翻转
+    const y = CANVAS_H - (e.clientY - r.top) / r.height * CANVAS_H;
     return { x, y };
   }
 
@@ -414,6 +415,9 @@ class Game {
   buildTower(slot, heroKey) {
     const hero = HEROES[heroKey];
     if (!hero) return false;
+    // 上阵数量上限：强迫「少而精 + 升星」，杜绝堆满全场无脑过图
+    const cap = this.towerCap();
+    if (!slot.tower && this.towers.length >= cap) { UI.toast('上阵位已满（' + cap + '），请升星或撤回'); return false; }
     if (this.gold < hero.cost) { UI.toast('积分不足'); return false; }
     this.gold -= hero.cost;
     const tex = Assets.tex(hero.img);
@@ -436,6 +440,11 @@ class Game {
     AudioMan.play('attack_sword', 0.3);
     this._updateHud();
     return true;
+  }
+
+  // 上阵数量上限：随关卡与科技缓慢提升（10 → 至多约 18）
+  towerCap() {
+    return 10 + Math.min(6, Math.floor(this.levelIdx / 8)) + (this.tech.capBonus || 0);
   }
 
   // 重算势力羁绊：在场武将变化时调用，重新计算全场加成并把结果叠回每座塔
@@ -597,7 +606,8 @@ class Game {
         this._win();
       } else {
         this.state = 'build';
-        this.gold += 30 + this.waveIdx * 5 + this.tech.interest;
+        // 整备补贴：仅固定小份 + 科技利息，不再随波次指数白给
+        this.gold += 12 + this.tech.interest;
         this.lives = Math.min(this.maxLives, this.lives + this.tech.regen);
         UI.setWaveBtn(true);
         UI.toast('本波已清剿，整备后继续');
@@ -624,11 +634,11 @@ class Game {
       if (e.dead) continue;
       // Boss 回血
       if (e.regen > 0) e.hp = Math.min(e.maxHp, e.hp + e.regen * dt);
-      // 治疗兵 / 妖术师：治疗周围友军
+      // 治疗兵 / 妖术师：治疗周围友军（节奏放缓，避免开局 DPS 压不过回血滚雪球）
       if (e.def.heal) {
         e.healTick -= dt;
         if (e.healTick <= 0) {
-          e.healTick = 1.0;
+          e.healTick = 2.5;
           this.enemies.forEach(o => {
             if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 120) {
               o.hp = Math.min(o.maxHp, o.hp + e.def.heal);
@@ -637,11 +647,13 @@ class Game {
           });
         }
       }
-      // 召唤者：周期召唤小怪
+      // 召唤者：周期召唤小怪（每个召唤者限量，避免后期无限消耗战）
       if (e.def.summon) {
         e.summonTick -= dt;
-        if (e.summonTick <= 0 && this.enemies.length < 120) {
-          e.summonTick = 4.0;
+        e.summonLeft = e.summonLeft === undefined ? 5 : e.summonLeft;   // 每只妖术师至多召唤 5 次
+        if (e.summonTick <= 0 && e.summonLeft > 0 && this.enemies.length < 120) {
+          e.summonTick = 6.0;
+          e.summonLeft--;
           const s = { ...this._spawnAt(e.def.summon, e.seg, e.dist) };
         }
       }
@@ -831,8 +843,10 @@ class Game {
     }
     if (e.hp <= 0) {
       e.dead = true; e._remove = true;
-      // 击杀积分 = 兵种基础分 × 关卡难度系数 × 科技加成
-      this.gold += Math.round(e.def.score * this.level.diff * (1 + this.tech.goldMult));
+      // 击杀积分 = 兵种基础分 × 关卡放大(开根号软化) × 科技加成
+      // 软化后：难度 ×1/×1.2/×1.5/×2/×3 → 积分放大 ×1/×1.1/×1.22/×1.41/×1.73，杜绝滚雪球
+      const scoreMul = Math.sqrt(this.level.diff);
+      this.gold += Math.round(e.def.score * scoreMul * (1 + this.tech.goldMult));
       // 击杀反馈按体型/重要性分级
       const n = e.def.boss ? 40 : (e.def.size >= 44 ? 22 : 16);
       this._burst(e.x, e.y, e.def.color, n);

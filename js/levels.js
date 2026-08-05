@@ -55,13 +55,15 @@ function enemyPool(lvl) {
   return pool;
 }
 
-// 难度曲线：血量倍数
+// 难度曲线：血量倍数（平滑阶梯，避免章间断崖）
 function hpMult(lvl) {
   if (lvl <= 10) return 1.0;
   if (lvl <= 20) return 1.2;
-  if (lvl <= 30) return 1.5;
+  if (lvl <= 30) return 1.45;
+  if (lvl <= 35) return 1.7;
   if (lvl <= 40) return 2.0;
-  return 3.0;
+  if (lvl <= 45) return 2.35;
+  return 2.7;
 }
 
 function makeLevel(lvl) {
@@ -76,15 +78,22 @@ function makeLevel(lvl) {
   const pool = enemyPool(lvl);
   const waves = [];
 
-  // 每波怪数按难度段递增
-  const baseCount = lvl <= 10 ? 5 + lvl : (lvl <= 20 ? 20 : (lvl <= 30 ? 40 : (lvl <= 40 ? 70 : 110)));
+  // 每波怪数按难度段递增（平滑，避免第5章数量+血量双跳变叠加成断崖）
+  const baseCount = lvl <= 10 ? 5 + lvl : (lvl <= 20 ? 20 : (lvl <= 30 ? 40 : (lvl <= 40 ? 66 : 88)));
   for (let w = 0; w < waveCount; w++) {
     const comp = [];
     const count = Math.min(baseCount + w * 3, 150);
-    // 每波 2~4 个兵种组
+    // 每波 2~4 个兵种组（限制超重型兵种占比，避免"纯战象/纯冲车"无解潮)
+    const HEAVY = ['elephant', 'ram', 'elite', 'catapult'];
     const groups = Math.min(2 + Math.floor(w / 3), 4);
+    let heavyUsed = 0;
+    const heavyCap = Math.max(1, Math.floor(groups / 2));   // 重型组至多占一半
     for (let g = 0; g < groups; g++) {
-      const t = pool[Math.floor(Math.random() * pool.length)];
+      let t = pool[Math.floor(Math.random() * pool.length)];
+      if (HEAVY.includes(t)) {
+        if (heavyUsed >= heavyCap) { t = pool.find(x => !HEAVY.includes(x)) || 'huangjin'; }
+        else heavyUsed++;
+      }
       comp.push({ type: t, count: Math.max(2, Math.floor(count / groups / 4)), interval: 0.8 });
     }
     waves.push(comp);
@@ -111,7 +120,7 @@ function makeLevel(lvl) {
     bg: (lvl === 50) ? 'boss' : chap.bg,
     path: PATHS[pathKey].map(p => ({ x: p[0], y: p[1] })),
     waves, diff,
-    startGold: 250 + lvl * 8,
+    startGold: 280 + lvl * 10,
     startLives: 20,
     boss: isBoss
   };

@@ -11,8 +11,8 @@ const HEROES = {
     passive:{ text:'伤害 +15%', damage:0.15 },
     levels:[
       { damage:30, range:95,  rate:1.1, cost:0 },
-      { damage:55, range:100, rate:1.2, cost:250 },
-      { damage:110,range:110, rate:1.35,cost:600 }
+      { damage:55, range:100, rate:1.2, cost:170 },
+      { damage:110,range:110, rate:1.35,cost:420 }
     ]
   },
   zhangfei: {
@@ -23,8 +23,8 @@ const HEROES = {
     passive:{ text:'溅射范围 +20%', splash:0.20 },
     levels:[
       { damage:28, range:92,  rate:1.0, cost:0 },
-      { damage:50, range:98,  rate:1.1, cost:250 },
-      { damage:100,range:108, rate:1.25,cost:600 }
+      { damage:50, range:98,  rate:1.1, cost:170 },
+      { damage:100,range:108, rate:1.25,cost:420 }
     ]
   },
   zhaoyun: {
@@ -35,8 +35,8 @@ const HEROES = {
     passive:{ text:'攻速 +10%', attackSpeed:0.10 },
     levels:[
       { damage:24, range:175, rate:1.55,cost:0 },
-      { damage:44, range:195, rate:1.7, cost:300 },
-      { damage:88, range:225, rate:1.9, cost:700 }
+      { damage:44, range:195, rate:1.7, cost:200 },
+      { damage:88, range:225, rate:1.9, cost:490 }
     ]
   },
   huangzhong: {
@@ -47,8 +47,8 @@ const HEROES = {
     passive:{ text:'射程 +15%', range:0.15 },
     levels:[
       { damage:34, range:190, rate:1.1, cost:0 },
-      { damage:62, range:215, rate:1.25,cost:300 },
-      { damage:120,range:250, rate:1.4, cost:700 }
+      { damage:62, range:215, rate:1.25,cost:200 },
+      { damage:120,range:250, rate:1.4, cost:490 }
     ]
   },
   zhugeliang: {
@@ -59,8 +59,8 @@ const HEROES = {
     passive:{ text:'溅射范围 +15%', splash:0.15 },
     levels:[
       { damage:40, range:150, rate:0.9, cost:0 },
-      { damage:74, range:162, rate:1.0, cost:400 },
-      { damage:148,range:178, rate:1.1, cost:900 }
+      { damage:74, range:162, rate:1.0, cost:280 },
+      { damage:148,range:178, rate:1.1, cost:640 }
     ]
   },
   machao: {
@@ -71,8 +71,8 @@ const HEROES = {
     passive:{ text:'攻速 +12%', attackSpeed:0.12 },
     levels:[
       { damage:26, range:180, rate:1.7, cost:0 },
-      { damage:48, range:200, rate:1.85,cost:320 },
-      { damage:96, range:230, rate:2.05,cost:720 }
+      { damage:48, range:200, rate:1.85,cost:220 },
+      { damage:96, range:230, rate:2.05,cost:500 }
     ]
   },
 
@@ -85,8 +85,8 @@ const HEROES = {
     passive:{ text:'攻击附带中毒', poison:true },
     levels:[
       { damage:34, range:150, rate:0.95,cost:0 },
-      { damage:62, range:160, rate:1.05,cost:400 },
-      { damage:124,range:175, rate:1.15,cost:900 }
+      { damage:62, range:160, rate:1.05,cost:280 },
+      { damage:124,range:175, rate:1.15,cost:640 }
     ]
   },
   dianwei: {
@@ -97,8 +97,8 @@ const HEROES = {
     passive:{ text:'伤害 +12%', damage:0.12 },
     levels:[
       { damage:36, range:92,  rate:1.05,cost:0 },
-      { damage:66, range:98,  rate:1.15,cost:280 },
-      { damage:132,range:108, rate:1.3, cost:650 }
+      { damage:66, range:98,  rate:1.15,cost:190 },
+      { damage:132,range:108, rate:1.3, cost:450 }
     ]
   },
 
@@ -111,8 +111,8 @@ const HEROES = {
     passive:{ text:'射程 +10%', range:0.10 },
     levels:[
       { damage:32, range:100, rate:1.2, cost:0 },
-      { damage:58, range:108, rate:1.3, cost:280 },
-      { damage:116,range:120, rate:1.45,cost:660 }
+      { damage:58, range:108, rate:1.3, cost:190 },
+      { damage:116,range:120, rate:1.45,cost:460 }
     ]
   },
 
@@ -125,8 +125,8 @@ const HEROES = {
     passive:{ text:'减速效果 +20%', slow:0.20 },
     levels:[
       { damage:14, range:145, rate:1.0, slow:0.35, slowTime:1.4, cost:0 },
-      { damage:24, range:155, rate:1.05,slow:0.45, slowTime:1.8, cost:280 },
-      { damage:42, range:170, rate:1.1, slow:0.55, slowTime:2.2, cost:650 }
+      { damage:24, range:155, rate:1.05,slow:0.45, slowTime:1.8, cost:190 },
+      { damage:42, range:170, rate:1.1, slow:0.55, slowTime:2.2, cost:450 }
     ]
   },
   lvbu: {
@@ -137,8 +137,8 @@ const HEROES = {
     passive:{ text:'暴击率 +25%', crit:0.25 },
     levels:[
       { damage:62, range:135, rate:0.7, cost:0 },
-      { damage:115,range:146, rate:0.8, cost:500 },
-      { damage:230,range:162, rate:0.9, cost:1200 }
+      { damage:115,range:146, rate:0.8, cost:340 },
+      { damage:230,range:162, rate:0.9, cost:820 }
     ]
   },
   pangtong: {
@@ -149,8 +149,8 @@ const HEROES = {
     passive:{ text:'溅射范围 +18%', splash:0.18 },
     levels:[
       { damage:36, range:148, rate:0.95,cost:0 },
-      { damage:66, range:160, rate:1.05,cost:400 },
-      { damage:132,range:176, rate:1.15,cost:880 }
+      { damage:66, range:160, rate:1.05,cost:280 },
+      { damage:132,range:176, rate:1.15,cost:600 }
     ]
   }
 };

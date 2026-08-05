@@ -9,6 +9,9 @@ const UI = {
     document.getElementById('hud-wave').textContent =
       Math.max(0, g.waveIdx + 1) + '/' + g.level.waves.length;
     document.getElementById('hud-level').textContent = '第 ' + g.level.level + ' 关';
+    // 上阵位
+    const capEl = document.getElementById('hud-cap');
+    if (capEl) capEl.textContent = g.towers.length + '/' + g.towerCap();
     // 势力羁绊提示
     const syn = document.getElementById('hud-synergy');
     if (syn && g.synergy) {
@@ -63,11 +66,17 @@ const UI = {
     this.hidePanels();
     const w = document.getElementById('build-wheel');
     w.innerHTML = '';
+    const cap = g.towerCap(), full = g.towers.length >= cap;
+    // 上阵位提示
+    const capInfo = document.createElement('div');
+    capInfo.className = 'wheel-cap';
+    capInfo.textContent = `上阵 ${g.towers.length}/${cap}` + (full ? ' · 已满，请升星/撤回' : '');
+    w.appendChild(capInfo);
     HERO_KEYS.forEach(k => {
       const h = HEROES[k];
       const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
       const b = document.createElement('div');
-      b.className = 'wheel-item' + (g.gold < h.cost ? ' disabled' : '');
+      b.className = 'wheel-item' + ((g.gold < h.cost || full) ? ' disabled' : '');
       b.innerHTML = `<img src="${h.img}" onerror="this.style.display='none'">
         <span class="fac-dot" style="background:${f.color}" title="${f.name}"></span>
         <div class="wi-name">${h.name}</div><div class="wi-cost">⚡${h.cost}</div>`;

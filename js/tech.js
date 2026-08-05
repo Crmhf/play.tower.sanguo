@@ -13,7 +13,10 @@ const TECH_TREE = [
   // 经济
   { id:'gold',       cat:'经济', name:'杀怪积分 +20%',     apply:m=>m.goldMult+=0.20 },
   { id:'startgold',  cat:'经济', name:'起始积分 +100',     apply:m=>m.startGold+=100 },
-  { id:'interest',   cat:'经济', name:'每波利息 +5',       apply:m=>m.interest+=5 }
+  { id:'interest',   cat:'经济', name:'每波利息 +5',       apply:m=>m.interest+=5 },
+  // 统帅
+  { id:'cap1',       cat:'统帅', name:'上阵位 +2',         apply:m=>m.capBonus+=2 },
+  { id:'cap2',       cat:'统帅', name:'上阵位 +3',         apply:m=>m.capBonus+=3 }
 ];
 
 const Tech = {
@@ -25,7 +28,7 @@ const Tech = {
   // 汇总所有已选科技加成
   mods() {
     const m = { attackSpeed:0, damage:0, pierce:0, crit:0, range:0,
-                livesMult:0, regen:0, revive:0, goldMult:0, startGold:0, interest:0 };
+                livesMult:0, regen:0, revive:0, goldMult:0, startGold:0, interest:0, capBonus:0 };
     this.owned().forEach(id => {
       const t = TECH_TREE.find(x => x.id === id);
       if (t) t.apply(m);

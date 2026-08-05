@@ -16,7 +16,7 @@ const ENEMIES = {
               hp:55,  speed:82, armor:0,  score:14, size:32, color:0xd08a3a,
               ability:'移动极快，容易漏怪，需减速或远程拦截。' },
   ram:      { id:'ram',      name:'冲车', img:'assets/img/enemies/ram.webp',
-              hp:300, speed:22, armor:12, score:26, size:44, color:0x8a6b3a,
+              hp:300, speed:22, armor:8,  score:26, size:44, color:0x8a6b3a,
               ability:'极高血量与护甲的攻城器械，慢速推进。' },
 
   // 进阶 4 种（第2-3章）
@@ -30,7 +30,7 @@ const ENEMIES = {
               hp:60,  speed:110,armor:0,  score:22, size:28, color:0x9a5bd0, stealth:true,
               ability:'隐身状态直奔城内，速度极快，需高攻速拦截。' },
   healer:   { id:'healer',   name:'治疗兵', img:'assets/img/enemies/healer.webp',
-              hp:90,  speed:44, armor:0,  score:30, size:30, color:0x4ad88a, heal:8,
+              hp:90,  speed:44, armor:0,  score:30, size:30, color:0x4ad88a, heal:5,
               ability:'持续治疗周围友军，必须优先击杀。' },
 
   // 终极 3 种（第4-5章）
@@ -38,10 +38,10 @@ const ENEMIES = {
               hp:260, speed:40, armor:4,  score:32, size:42, color:0xff7030, burn:true,
               ability:'易燃的火攻船，赤壁之战的先锋。' },
   elephant: { id:'elephant', name:'战象', img:'assets/img/enemies/elephant.webp',
-              hp:900, speed:20, armor:16, score:60, size:60, color:0x9a9a9a, slow_aura:true,
+              hp:900, speed:20, armor:10, score:60, size:60, color:0x9a9a9a, slow_aura:true,
               ability:'极高血量与护甲的南蛮巨兽，缓慢碾压。' },
   sorcerer: { id:'sorcerer', name:'妖术师', img:'assets/img/enemies/sorcerer.webp',
-              hp:320, speed:34, armor:6,  score:55, size:36, color:0xa04ad8, summon:'huangjin', heal:6,
+              hp:320, speed:34, armor:6,  score:55, size:36, color:0xa04ad8, summon:'huangjin', heal:4,
               ability:'周期召唤小怪并治疗友军，威胁极大。' },
 
   // 章节 Boss
