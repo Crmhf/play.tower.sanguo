@@ -55,15 +55,15 @@ function enemyPool(lvl) {
   return pool;
 }
 
-// 难度曲线：血量倍数（平滑阶梯，避免章间断崖）
+// 难度曲线：血量倍数（平滑阶梯，避免章间断崖；后段略抬提供终局张力）
 function hpMult(lvl) {
   if (lvl <= 10) return 1.0;
   if (lvl <= 20) return 1.2;
   if (lvl <= 30) return 1.45;
   if (lvl <= 35) return 1.7;
   if (lvl <= 40) return 2.0;
-  if (lvl <= 45) return 2.35;
-  return 2.7;
+  if (lvl <= 45) return 2.45;
+  return 2.9;
 }
 
 function makeLevel(lvl) {

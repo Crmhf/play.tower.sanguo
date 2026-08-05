@@ -16,6 +16,7 @@ class Game {
     this.gold = this.level.startGold + this.tech.startGold;
     this.lives = Math.round(this.level.startLives * (1 + this.tech.livesMult));
     this.maxLives = this.lives;
+    this._reviveLeft = this.tech.revive || 0;   // 复活币（_reachBase 归零时消耗）
 
     // 状态
     this.state = 'build';            // build | wave | won | lost
@@ -496,7 +497,7 @@ class Game {
     let refund = Math.floor(t.hero.cost * 0.7);
     for (let i = 1; i <= t.lvl; i++) refund += Math.floor(t.hero.levels[i].cost * 0.7);
     this.gold += refund;
-    this.scene.remove(t.mesh);
+    this._disposeMesh(t.mesh);
     this.towers = this.towers.filter(x => x !== t);
     slot.tower = null; slot.mesh.visible = true;
     this._recalcSynergy();
@@ -617,8 +618,12 @@ class Game {
   }
 
   render() {
-    // 相机震动
-    const sx = (Math.random() - 0.5) * this.shake, sy = (Math.random() - 0.5) * this.shake;
+    // 相机震动（尊重 prefers-reduced-motion：关闭屏震）
+    if (this._reduceMotion === undefined) {
+      this._reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    const shakeAmp = this._reduceMotion ? 0 : this.shake;
+    const sx = (Math.random() - 0.5) * shakeAmp, sy = (Math.random() - 0.5) * shakeAmp;
     this.camera.position.set(sx, sy, 100);
     this.renderer.render(this.scene, this.camera);
   }
@@ -638,10 +643,11 @@ class Game {
       if (e.def.heal) {
         e.healTick -= dt;
         if (e.healTick <= 0) {
-          e.healTick = 2.5;
+          e.healTick = 2.2;
+          const healAmt = e.def.heal * this.level.diff;   // 回血随难度缩放，后期仍是威胁
           this.enemies.forEach(o => {
             if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 120) {
-              o.hp = Math.min(o.maxHp, o.hp + e.def.heal);
+              o.hp = Math.min(o.maxHp, o.hp + healAmt);
               this._particle(o.x, o.y, 0x4ad88a);
             }
           });
@@ -652,7 +658,7 @@ class Game {
         e.summonTick -= dt;
         e.summonLeft = e.summonLeft === undefined ? 5 : e.summonLeft;   // 每只妖术师至多召唤 5 次
         if (e.summonTick <= 0 && e.summonLeft > 0 && this.enemies.length < 120) {
-          e.summonTick = 6.0;
+          e.summonTick = 5.0;
           e.summonLeft--;
           const s = { ...this._spawnAt(e.def.summon, e.seg, e.dist) };
         }
@@ -705,11 +711,20 @@ class Game {
     // 清理死亡
     this.enemies = this.enemies.filter(e => {
       if (e._remove) {
-        this.scene.remove(e.mesh); if (e.hpBar) this.scene.remove(e.hpBar);
+        this._disposeMesh(e.mesh);
+        if (e.hpBar) this._disposeMesh(e.hpBar);
         return false;
       }
       return true;
     });
+  }
+
+  // 释放一个 mesh 的几何体与材质（纹理为共享缓存，不 dispose）
+  _disposeMesh(m) {
+    if (!m) return;
+    this.scene.remove(m);
+    if (m.geometry) m.geometry.dispose();
+    if (m.material) m.material.dispose();
   }
 
   // 在指定路径位置召唤（供召唤者用）
@@ -727,6 +742,13 @@ class Game {
     this.shake = Math.max(this.shake, 10);
     AudioMan.play('hit', 0.5);
     UI.hurtFlash();
+    // 复活币：命数将归零时消耗一枚续命
+    if (this.lives <= 0 && this._reviveLeft > 0) {
+      this._reviveLeft--;
+      this.lives = Math.max(1, Math.ceil(this.maxLives * 0.3));
+      UI.toast('🏅 复活币生效，城防恢复至 ' + this.lives);
+      this._burst(this.basePos.x, this.basePos.y, 0xffe08a, 24);
+    }
     this._updateHud();
     if (this.lives <= 0) this._lose();
   }
@@ -781,7 +803,9 @@ class Game {
       mesh: m, target, x: t.slot.x, y: t.slot.y,
       speed: 460, dmg, splash: t.splash || 0, crit,
       slow: t.slow, slowTime: t.slowTime, color: t.projColor,
-      poison: !!t.hero.passive.poison   // 司马懿：攻击附毒
+      pierce: t.pierce || 0,                 // 赵云/黄忠/马超：穿透额外目标
+      poison: !!t.hero.passive.poison,       // 司马懿：攻击附毒
+      burn: !!t.hero.passive.burn            // 庞统：溅射灼烧
     });
     AudioMan.play('whoosh', 0.15);
   }
@@ -799,7 +823,11 @@ class Game {
           this._burst(p.target.x, p.target.y, p.color, 12);
           AudioMan.play('explosion', 0.3);
           this.enemies.forEach(e => {
-            if (!e.dead && Math.hypot(e.x - p.target.x, e.y - p.target.y) < p.splash) this._damage(e, p.dmg, { crit: p.crit });
+            if (!e.dead && Math.hypot(e.x - p.target.x, e.y - p.target.y) < p.splash) {
+              this._damage(e, p.dmg, { crit: p.crit });
+              // 庞统：溅射灼烧
+              if (p.burn && !e.dead) { e.burnT = 3; e.burnDps = p.dmg * 0.3; }
+            }
           });
           this.shake = Math.max(this.shake, 4);
         } else {
@@ -807,6 +835,16 @@ class Game {
           this._particle(p.target.x, p.target.y, p.color);
           if (p.slow) this._slow(p.target, p.slow, p.slowTime);
           if (p.poison && !p.target.dead) { p.target.poisonT = 3; p.target.poisonDps = p.dmg * 0.3; }
+          if (p.burn && !p.target.dead) { p.target.burnT = 3; p.target.burnDps = p.dmg * 0.3; }
+          // 穿透：对主目标附近额外 p.pierce 个敌人各结算一次伤害
+          if (p.pierce > 0) {
+            let n = 0;
+            for (const e of this.enemies) {
+              if (n >= p.pierce) break;
+              if (e.dead || e === p.target) continue;
+              if (Math.hypot(e.x - p.target.x, e.y - p.target.y) < 90) { this._damage(e, p.dmg, { crit: p.crit }); n++; }
+            }
+          }
           AudioMan.play('hit', 0.2);
         }
         p._remove = true;
@@ -818,7 +856,7 @@ class Game {
       }
     }
     this.projectiles = this.projectiles.filter(p => {
-      if (p._remove) { this.scene.remove(p.mesh); return false; }
+      if (p._remove) { this._disposeMesh(p.mesh); return false; }
       return true;
     });
   }
@@ -871,11 +909,11 @@ class Game {
     const el = document.createElement('div');
     el.className = 'dmg-num' + (crit ? ' crit' : '');
     el.textContent = crit ? '暴 ' + text : text;
-    // 世界坐标 → stage 内像素（考虑 canvas 实际显示缩放）
+    // 世界坐标 → stage 内像素（考虑 canvas 实际显示缩放）；世界 y 朝上需翻转回屏幕 y
     const canvas = this.renderer.domElement;
     const scale = canvas.clientWidth ? (canvas.clientWidth / CANVAS_W) : 1;
     el.style.left = (wx * scale) + 'px';
-    el.style.top = (wy * scale) + 'px';
+    el.style.top = ((CANVAS_H - wy) * scale) + 'px';
     stage.appendChild(el);
     this._floaters.push({ el, life: 0, max: 0.7 });
   }
@@ -895,9 +933,12 @@ class Game {
   }
 
   destroy() {
+    // 统一遍历场景释放所有几何体/材质（纹理共享不 dispose）
+    this.scene.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); }
+    });
     this.container.innerHTML = '';
-    // 释放粒子系统与渲染器，避免泄漏
-    if (this.points) { this.points.geometry.dispose(); this.points.material.dispose(); }
     this.renderer.dispose();
   }
 }

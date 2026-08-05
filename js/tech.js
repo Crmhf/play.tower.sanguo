@@ -7,16 +7,16 @@ const TECH_TREE = [
   { id:'crit',       cat:'进攻', name:'暴击率 +5%',        apply:m=>m.crit+=0.05 },
   { id:'range',      cat:'进攻', name:'全军射程 +12%',     apply:m=>m.range+=0.12 },
   // 防御
-  { id:'hp',         cat:'防御', name:'城防血量 +20%',     apply:m=>m.livesMult+=0.20 },
-  { id:'regen',      cat:'防御', name:'城防每波回复 +5',   apply:m=>m.regen+=5 },
+  { id:'hp',         cat:'防御', name:'城防血量 +15%',     apply:m=>m.livesMult+=0.15 },
+  { id:'regen',      cat:'防御', name:'城防每波回复 +2',   apply:m=>m.regen+=2 },
   { id:'revive',     cat:'防御', name:'复活币 +1',         apply:m=>m.revive+=1 },
   // 经济
   { id:'gold',       cat:'经济', name:'杀怪积分 +20%',     apply:m=>m.goldMult+=0.20 },
   { id:'startgold',  cat:'经济', name:'起始积分 +100',     apply:m=>m.startGold+=100 },
   { id:'interest',   cat:'经济', name:'每波利息 +5',       apply:m=>m.interest+=5 },
   // 统帅
-  { id:'cap1',       cat:'统帅', name:'上阵位 +2',         apply:m=>m.capBonus+=2 },
-  { id:'cap2',       cat:'统帅', name:'上阵位 +3',         apply:m=>m.capBonus+=3 }
+  { id:'cap1',       cat:'统帅', name:'上阵位 +1',         apply:m=>m.capBonus+=1 },
+  { id:'cap2',       cat:'统帅', name:'上阵位 +2',         apply:m=>m.capBonus+=2 }
 ];
 
 const Tech = {
@@ -49,12 +49,27 @@ const Tech = {
   },
 
   pick(id) {
+    if (this.points() <= 0) return false;            // 需有可用科技点
     const owned = this.owned();
     if (!owned.includes(id)) owned.push(id);
     localStorage.setItem(this.KEY, JSON.stringify(owned));
+    localStorage.setItem('sg_tech_points', String(this.points() - 1));  // 扣点
+    return true;
   },
 
   addPoint() {
     localStorage.setItem('sg_tech_points', String(this.points() + 1));
+  },
+
+  // 每关科技点只首通给一次（防重复刷关农场）
+  grantForLevel(level) {
+    const key = 'sg_tech_cleared';
+    let cleared = [];
+    try { cleared = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){}
+    if (cleared.includes(level)) return false;
+    cleared.push(level);
+    localStorage.setItem(key, JSON.stringify(cleared));
+    this.addPoint();
+    return true;
   }
 };

@@ -1,19 +1,25 @@
 // UI 管理：HUD、建造轮盘、升级面板、结算
 const UI = {
-  game: null,
+  game: null, _hud: null,
 
   updateHud(g) {
     this.game = g;
-    document.getElementById('hud-gold').textContent = g.gold;
-    document.getElementById('hud-lives').textContent = g.lives;
-    document.getElementById('hud-wave').textContent =
-      Math.max(0, g.waveIdx + 1) + '/' + g.level.waves.length;
-    document.getElementById('hud-level').textContent = '第 ' + g.level.level + ' 关';
-    // 上阵位
-    const capEl = document.getElementById('hud-cap');
-    if (capEl) capEl.textContent = g.towers.length + '/' + g.towerCap();
+    // 缓存 HUD 元素引用，避免每帧重复 getElementById
+    if (!this._hud) {
+      this._hud = {};
+      ['hud-gold','hud-lives','hud-wave','hud-level','hud-cap','hud-synergy'].forEach(id => {
+        this._hud[id] = document.getElementById(id);
+      });
+    }
+    const H = this._hud;
+    if (H['hud-gold'].textContent != g.gold) H['hud-gold'].textContent = g.gold;
+    if (H['hud-lives'].textContent != g.lives) H['hud-lives'].textContent = g.lives;
+    const waveTxt = Math.max(0, g.waveIdx + 1) + '/' + g.level.waves.length;
+    if (H['hud-wave'].textContent !== waveTxt) H['hud-wave'].textContent = waveTxt;
+    H['hud-level'].textContent = '第 ' + g.level.level + ' 关';
+    if (H['hud-cap']) H['hud-cap'].textContent = g.towers.length + '/' + g.towerCap();
     // 势力羁绊提示
-    const syn = document.getElementById('hud-synergy');
+    const syn = H['hud-synergy'];
     if (syn && g.synergy) {
       if (g.synergy.active.length) {
         const buff = g.synergy.active.filter(a => a.kind !== 'nerf').length;
@@ -83,12 +89,13 @@ const UI = {
       b.onclick = (e) => { e.stopPropagation(); if (g.buildTower(slot, k)) this.hidePanels(); };
       w.appendChild(b);
     });
-    // 定位
+    // 定位（按轮盘实际半宽/半高钳制，避免溢出屏幕）
     const stage = document.getElementById('stage').getBoundingClientRect();
     let x = cx - stage.left, y = cy - stage.top;
-    w.style.left = Math.min(Math.max(x, 90), stage.width - 90) + 'px';
-    w.style.top = Math.min(Math.max(y, 110), stage.height - 60) + 'px';
     w.classList.add('show');
+    const hw = w.offsetWidth / 2, hh = w.offsetHeight / 2;
+    w.style.left = Math.min(Math.max(x, hw + 8), stage.width - hw - 8) + 'px';
+    w.style.top = Math.min(Math.max(y, hh + 8), stage.height - hh - 8) + 'px';
     w.onclick = (e) => e.stopPropagation();
   },
 
@@ -187,13 +194,13 @@ const UI = {
     const next = document.getElementById('result-next');
     next.style.display = (won && g.levelIdx < LEVELS.length - 1) ? 'inline-block' : 'none';
 
-    // 通关奖励科技点 → 3 选 1
+    // 通关奖励科技点 → 3 选 1（每关仅首通给点；pick 时扣点）
     const techBox = document.getElementById('tech-choice');
     if (won) {
-      Tech.addPoint();
+      const granted = Tech.grantForLevel(g.level.level);   // 重复通关不再给点
       const choices = Tech.choices();
-      if (choices.length) {
-        techBox.innerHTML = '<div class="tech-title">⭐ 获得科技点 · 三选一强化</div>';
+      if (choices.length && Tech.points() > 0) {
+        techBox.innerHTML = '<div class="tech-title">⭐ ' + (granted ? '获得科技点' : '使用剩余科技点') + ' · 三选一强化</div>';
         const row = document.createElement('div');
         row.className = 'tech-row';
         choices.forEach(t => {
@@ -201,8 +208,9 @@ const UI = {
           b.className = 'tech-card';
           b.innerHTML = `<div class="tc-cat">${t.cat}</div><div class="tc-name">${t.name}</div>`;
           b.onclick = () => {
-            Tech.pick(t.id);
-            techBox.innerHTML = `<div class="tech-done">已选择：${t.name}</div>`;
+            if (Tech.pick(t.id)) {
+              techBox.innerHTML = `<div class="tech-done">已选择：${t.name}</div>`;
+            }
           };
           row.appendChild(b);
         });

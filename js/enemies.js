@@ -21,8 +21,8 @@ const ENEMIES = {
 
   // 进阶 4 种（第2-3章）
   catapult: { id:'catapult', name:'投石车', img:'assets/img/enemies/catapult.webp',
-              hp:220, speed:24, armor:6,  score:28, size:46, color:0x9a7a4a, splash:true,
-              ability:'远程溅射的攻城武器，血厚甲高。' },
+              hp:220, speed:24, armor:6,  score:28, size:46, color:0x9a7a4a,
+              ability:'血厚甲高的攻城武器，缓慢而坚硬。' },
   elite:    { id:'elite',    name:'精英武将', img:'assets/img/enemies/elite.webp',
               hp:600, speed:38, armor:10, score:50, size:44, color:0xc04a4a,
               ability:'BOSS 级单体精英，血厚攻高，优先集火。' },
@@ -35,10 +35,10 @@ const ENEMIES = {
 
   // 终极 3 种（第4-5章）
   fireship: { id:'fireship', name:'火船', img:'assets/img/enemies/fireship.webp',
-              hp:260, speed:40, armor:4,  score:32, size:42, color:0xff7030, burn:true,
-              ability:'易燃的火攻船，赤壁之战的先锋。' },
+              hp:260, speed:40, armor:4,  score:32, size:42, color:0xff7030,
+              ability:'赤壁之战的先锋快船，机动突袭。' },
   elephant: { id:'elephant', name:'战象', img:'assets/img/enemies/elephant.webp',
-              hp:900, speed:20, armor:10, score:60, size:60, color:0x9a9a9a, slow_aura:true,
+              hp:900, speed:20, armor:10, score:60, size:60, color:0x9a9a9a,
               ability:'极高血量与护甲的南蛮巨兽，缓慢碾压。' },
   sorcerer: { id:'sorcerer', name:'妖术师', img:'assets/img/enemies/sorcerer.webp',
               hp:320, speed:34, armor:6,  score:55, size:36, color:0xa04ad8, summon:'huangjin', heal:4,
@@ -58,9 +58,9 @@ const ENEMIES = {
               hp:5500, speed:30, armor:12, score:500, size:64, color:0x3a6ac0,
               ability:'袁绍名将，与颜良双 Boss 分进夹击。' },
   zhouyu:     { id:'zhouyu',    name:'周瑜', img:'assets/img/boss/zhouyu.webp', boss:true,
-              hp:9000, speed:28, armor:14, score:750, size:68, color:0xff7040, burn:true,
-              ability:'大都督火烧连营，需快速集火清怪。' },
+              hp:9000, speed:28, armor:14, score:750, size:68, color:0xff7040,
+              ability:'大都督统率火攻大军，血厚需集火。' },
   simayi_boss:{ id:'simayi_boss', name:'司马懿', img:'assets/img/boss/simayi_boss.webp', boss:true,
-              hp:20000,speed:22, armor:20, score:2500,size:84, color:0xa04ad8, summon:'sorcerer', regen:30,
+              hp:15000,speed:22, armor:20, score:2500,size:84, color:0xa04ad8, summon:'sorcerer', regen:20,
               ability:'终极 Boss，持续召唤妖术师且自身回血。' }
 };

@@ -1,7 +1,7 @@
 // 主入口：场景管理（菜单 → 选关 → 战斗）
 const App = {
   game: null, raf: null, last: 0,
-  unlocked: parseInt(localStorage.getItem('sg_unlocked') || '1'),
+  unlocked: Math.max(1, parseInt(localStorage.getItem('sg_unlocked') || '1', 10) || 1),
 
   start() {
     this._bindMenu();
@@ -142,7 +142,9 @@ const App = {
 
     // 绑定战斗 UI
     document.getElementById('wave-btn').onclick = () => this.game.startWave();
-    document.getElementById('speed-btn').onclick = (e) => {
+    const speedBtn = document.getElementById('speed-btn');
+    speedBtn.textContent = '×1';                       // 每局重置倍率显示
+    speedBtn.onclick = (e) => {
       this.game.speed = this.game.speed === 1 ? 2 : 1;
       e.target.textContent = '×' + this.game.speed;
     };
@@ -153,7 +155,7 @@ const App = {
 
     // 键盘快捷键
     window.onkeydown = (e) => {
-      if (e.code === 'Enter') this.game.startWave();
+      if (e.code === 'Enter' && this.game && (this.game.state === 'build' || this.game.state === 'wave')) this.game.startWave();
       if (e.code === 'Escape') UI.hideHelp();
     };
 
@@ -184,6 +186,7 @@ const App = {
 
   quitBattle() {
     this._stopLoop();
+    window.onkeydown = null;                 // 解绑快捷键，避免驱动已销毁的旧 game
     if (this.game && this.game.state === 'won') {
       // 解锁下一关
       const nl = this.game.level.level + 1;

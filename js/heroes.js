@@ -146,7 +146,7 @@ const HEROES = {
     img:'assets/img/heroes/pangtong.webp', color:'#8affc0', projColor:0x7ae8b0,
     desc:'凤雏先生，连环妙计，溅射灼烧群敌。',
     cost:280, splash:56,
-    passive:{ text:'溅射范围 +18%', splash:0.18 },
+    passive:{ text:'溅射范围 +18%、命中灼烧', splash:0.18, burn:true },
     levels:[
       { damage:36, range:148, rate:0.95,cost:0 },
       { damage:66, range:160, rate:1.05,cost:280 },
