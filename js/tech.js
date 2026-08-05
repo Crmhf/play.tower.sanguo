@@ -11,8 +11,8 @@ const TECH_TREE = [
   { id:'regen',      cat:'防御', name:'城防每波回复 +2',   apply:m=>m.regen+=2 },
   { id:'revive',     cat:'防御', name:'复活币 +1',         apply:m=>m.revive+=1 },
   // 经济
-  { id:'gold',       cat:'经济', name:'杀怪积分 +20%',     apply:m=>m.goldMult+=0.20 },
-  { id:'startgold',  cat:'经济', name:'起始积分 +100',     apply:m=>m.startGold+=100 },
+  { id:'gold',       cat:'经济', name:'杀怪金币 +20%',     apply:m=>m.goldMult+=0.20 },
+  { id:'startgold',  cat:'经济', name:'起始金币 +100',     apply:m=>m.startGold+=100 },
   { id:'interest',   cat:'经济', name:'每波利息 +5',       apply:m=>m.interest+=5 },
   // 统帅
   { id:'cap1',       cat:'统帅', name:'上阵位 +1',         apply:m=>m.capBonus+=1 },

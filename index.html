@@ -20,16 +20,18 @@
     <div id="menu-inner" class="hide">
       <h1 class="game-title">三国塔防</h1>
       <p class="game-sub"><span class="deco-line"></span>TOWER OF THREE KINGDOMS<span class="deco-line"></span></p>
-      <!-- 群英荟萃：12 名将剪影横向轮播（复用已加载的立绘，零新增资源） -->
+      <!-- 群英荟萃：36 名将剪影横向轮播（复用已加载的立绘，零新增资源） -->
       <div class="hero-parade" aria-hidden="true">
-        <div class="parade-track">
-          <img src="assets/img/heroes/guanyu.webp" alt=""><img src="assets/img/heroes/zhangfei.webp" alt=""><img src="assets/img/heroes/zhaoyun.webp" alt=""><img src="assets/img/heroes/huangzhong.webp" alt=""><img src="assets/img/heroes/machao.webp" alt=""><img src="assets/img/heroes/zhugeliang.webp" alt=""><img src="assets/img/heroes/simayi.webp" alt=""><img src="assets/img/heroes/dianwei.webp" alt=""><img src="assets/img/heroes/zhoutai.webp" alt=""><img src="assets/img/heroes/diaochan.webp" alt=""><img src="assets/img/heroes/lvbu.webp" alt=""><img src="assets/img/heroes/pangtong.webp" alt="">
-          <img src="assets/img/heroes/guanyu.webp" alt=""><img src="assets/img/heroes/zhangfei.webp" alt=""><img src="assets/img/heroes/zhaoyun.webp" alt=""><img src="assets/img/heroes/huangzhong.webp" alt=""><img src="assets/img/heroes/machao.webp" alt=""><img src="assets/img/heroes/zhugeliang.webp" alt=""><img src="assets/img/heroes/simayi.webp" alt=""><img src="assets/img/heroes/dianwei.webp" alt=""><img src="assets/img/heroes/zhoutai.webp" alt=""><img src="assets/img/heroes/diaochan.webp" alt=""><img src="assets/img/heroes/lvbu.webp" alt=""><img src="assets/img/heroes/pangtong.webp" alt="">
-        </div>
+        <div class="parade-track" id="parade-track"></div>
       </div>
       <button id="btn-start" class="big-btn">进入乱世</button>
+      <!-- 势力选择：选定后本局建造轮盘只显示该势力武将 -->
+      <div class="faction-select">
+        <div class="fs-tip">选择你的势力 · 本局统军</div>
+        <div class="fs-row" id="faction-row"></div>
+      </div>
       <button id="btn-help" class="help-btn">📖 武将图鉴</button>
-      <p class="menu-tip">50 关史诗战役 · 12 名将积分召唤上阵 · 势力羁绊相生相克</p>
+      <p class="menu-tip">50 关史诗战役 · 36 名将分隶四势力 · 金币召唤上阵</p>
     </div>
     <!-- 底部氛围：暖色地平线 + 滚动战役导语 -->
     <div class="menu-aurora" aria-hidden="true"></div>
@@ -41,6 +43,7 @@
   <section id="screen-levels" class="screen">
     <h2 class="screen-title">选择关卡</h2>
     <div class="campaign-bar" id="campaign-bar"></div>
+    <div class="levels-faction" id="levels-faction"></div>
     <button id="btn-help2" class="help-btn">📖 武将图鉴</button>
     <div id="level-grid"></div>
   </section>
@@ -49,7 +52,7 @@
   <section id="screen-battle" class="screen">
     <div id="hud">
       <span class="hud-item" id="hud-level">第 1 关</span>
-      <span class="hud-item">⚡ <b id="hud-gold">0</b></span>
+      <span class="hud-item">💰 <b id="hud-gold">0</b></span>
       <span class="hud-item">❤️ <b id="hud-lives">0</b></span>
       <span class="hud-item">🌊 <b id="hud-wave">0/0</b></span>
       <span class="hud-item">⚔️ <b id="hud-cap">0/10</b></span>
@@ -67,8 +70,6 @@
 
       <div id="build-wheel"></div>
       <div id="upgrade-panel"></div>
-
-      <button id="wave-btn" class="wave-btn">▶ 出兵</button>
 
       <div id="result">
         <div class="result-box">
@@ -98,20 +99,20 @@
       </div>
       <button id="help-close">✕</button>
     </div>
-    <div class="help-tip">击杀怪物获得积分（积分 = 怪物分值 × 关卡难度），用积分召唤武将上阵、并为其升星强化。同势力武将齐上阵触发羁绊增益，部分武将同场会内耗削弱。</div>
+    <div class="help-tip">击杀怪物获得金币（金币 = 怪物分值 × 关卡难度），用金币召唤武将上阵、并为其升星强化。同势力武将齐上阵触发羁绊增益，部分武将同场会内耗削弱。</div>
     <div id="help-grid"></div>
   </div>
 </div>
 
-<script src="js/heroes.js?v=11"></script>
-<script src="js/enemies.js?v=11"></script>
-<script src="js/levels.js?v=11"></script>
-<script src="js/tech.js?v=11"></script>
-<script src="js/synergy.js?v=11"></script>
-<script src="js/assets.js?v=11"></script>
-<script src="js/audio.js?v=11"></script>
-<script src="js/ui.js?v=11"></script>
-<script src="js/game.js?v=11"></script>
-<script src="js/main.js?v=11"></script>
+<script src="js/heroes.js?v=28"></script>
+<script src="js/enemies.js?v=28"></script>
+<script src="js/levels.js?v=28"></script>
+<script src="js/tech.js?v=28"></script>
+<script src="js/synergy.js?v=28"></script>
+<script src="js/assets.js?v=28"></script>
+<script src="js/audio.js?v=28"></script>
+<script src="js/ui.js?v=28"></script>
+<script src="js/game.js?v=28"></script>
+<script src="js/main.js?v=28"></script>
 </body>
 </html>

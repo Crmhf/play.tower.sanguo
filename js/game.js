@@ -1,5 +1,5 @@
 // 核心战斗引擎：Three.js 正交渲染 + 塔防逻辑 + 粒子 + 屏震
-// 武将以积分召唤上阵当「塔」，固定槽位，可升 3 星
+// 武将以金币召唤上阵当「塔」，固定槽位，可升 3 星
 class Game {
   constructor(container, levelIdx) {
     this.container = container;
@@ -12,7 +12,7 @@ class Game {
     // 势力羁绊（在场武将联动加成/削弱，build/sell 时重算）
     this.synergy = { mods:{}, debuff:{}, active:[], count:{wei:0,shu:0,wu:0,qun:0} };
 
-    // 资源（积分，应用科技）
+    // 资源（金币，应用科技）
     this.gold = this.level.startGold + this.tech.startGold;
     this.lives = Math.round(this.level.startLives * (1 + this.tech.livesMult));
     this.maxLives = this.lives;
@@ -419,7 +419,7 @@ class Game {
     // 上阵数量上限：强迫「少而精 + 升星」，杜绝堆满全场无脑过图
     const cap = this.towerCap();
     if (!slot.tower && this.towers.length >= cap) { UI.toast('上阵位已满（' + cap + '），请升星或撤回'); return false; }
-    if (this.gold < hero.cost) { UI.toast('积分不足'); return false; }
+    if (this.gold < hero.cost) { UI.toast('金币不足'); return false; }
     this.gold -= hero.cost;
     const tex = Assets.tex(hero.img);
     const mesh = new THREE.Mesh(
@@ -480,7 +480,7 @@ class Game {
     const t = slot.tower;
     if (!t || t.lvl >= 2) { UI.toast('已满级'); return; }
     const cost = t.hero.levels[t.lvl + 1].cost;
-    if (this.gold < cost) { UI.toast('积分不足'); return; }
+    if (this.gold < cost) { UI.toast('金币不足'); return; }
     this.gold -= cost;
     t.lvl++;
     Object.assign(t, this._towerStats(t.hero, t.lvl));
@@ -510,6 +510,7 @@ class Game {
     this.waveIdx++;
     if (this.waveIdx >= this.level.waves.length) return;
     this.state = 'wave';
+    this._autoWaveT = undefined;   // 进入波次，取消自动倒计时
     AudioMan.play('wave_horn', 0.5);
     // 展开生成队列
     this.spawnQueue = [];
@@ -522,7 +523,6 @@ class Game {
       }
       t += 1.5;
     });
-    UI.setWaveBtn(false);
     UI.toast('第 ' + (this.waveIdx + 1) + ' 波来袭！');
     // 出兵号角：出兵口错相位金色冲击环
     const s = this.path[0];
@@ -610,10 +610,17 @@ class Game {
         // 整备补贴：仅固定小份 + 科技利息，不再随波次指数白给
         this.gold += 12 + this.tech.interest;
         this.lives = Math.min(this.maxLives, this.lives + this.tech.regen);
-        UI.setWaveBtn(true);
-        UI.toast('本波已清剿，整备后继续');
+        UI.toast('本波已清剿，敌军将至…');
+        // 自动出兵：短暂整备后下一波自动来袭（无需手动点出兵）
+        this._autoWaveT = 5.0;
       }
       this._updateHud();
+    }
+
+    // 自动出兵倒计时
+    if (this.state === 'build' && this._autoWaveT !== undefined && this._autoWaveT > 0) {
+      this._autoWaveT -= dt;
+      if (this._autoWaveT <= 0) { this._autoWaveT = undefined; this.startWave(); }
     }
   }
 
@@ -643,7 +650,7 @@ class Game {
       if (e.def.heal) {
         e.healTick -= dt;
         if (e.healTick <= 0) {
-          e.healTick = 2.2;
+          e.healTick = 1.8;
           const healAmt = e.def.heal * this.level.diff;   // 回血随难度缩放，后期仍是威胁
           this.enemies.forEach(o => {
             if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 120) {
@@ -653,14 +660,14 @@ class Game {
           });
         }
       }
-      // 召唤者：周期召唤小怪（每个召唤者限量，避免后期无限消耗战）
+      // 召唤者：周期召唤小怪（限量 + 同屏召唤物上限，避免稀释溅射/无限消耗）
       if (e.def.summon) {
         e.summonTick -= dt;
-        e.summonLeft = e.summonLeft === undefined ? 5 : e.summonLeft;   // 每只妖术师至多召唤 5 次
-        if (e.summonTick <= 0 && e.summonLeft > 0 && this.enemies.length < 120) {
+        e.summonLeft = e.summonLeft === undefined ? 3 : e.summonLeft;   // 每只妖术师至多召唤 3 次
+        if (e.summonTick <= 0 && e.summonLeft > 0 && this.enemies.length < 90) {
           e.summonTick = 5.0;
           e.summonLeft--;
-          const s = { ...this._spawnAt(e.def.summon, e.seg, e.dist) };
+          this._spawnAt(e.def.summon, e.seg, e.dist);
         }
       }
       // 减速
@@ -881,8 +888,8 @@ class Game {
     }
     if (e.hp <= 0) {
       e.dead = true; e._remove = true;
-      // 击杀积分 = 兵种基础分 × 关卡放大(开根号软化) × 科技加成
-      // 软化后：难度 ×1/×1.2/×1.5/×2/×3 → 积分放大 ×1/×1.1/×1.22/×1.41/×1.73，杜绝滚雪球
+      // 击杀金币 = 兵种基础分 × 关卡放大(开根号软化) × 科技加成
+      // 软化后：难度 ×1/×1.2/×1.5/×2/×3 → 金币放大 ×1/×1.1/×1.22/×1.41/×1.73，杜绝滚雪球
       const scoreMul = Math.sqrt(this.level.diff);
       this.gold += Math.round(e.def.score * scoreMul * (1 + this.tech.goldMult));
       // 击杀反馈按体型/重要性分级

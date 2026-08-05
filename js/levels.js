@@ -60,10 +60,42 @@ function hpMult(lvl) {
   if (lvl <= 10) return 1.0;
   if (lvl <= 20) return 1.2;
   if (lvl <= 30) return 1.45;
-  if (lvl <= 35) return 1.7;
-  if (lvl <= 40) return 2.0;
-  if (lvl <= 45) return 2.45;
-  return 2.9;
+  if (lvl <= 35) return 1.62;
+  if (lvl <= 40) return 1.9;
+  if (lvl <= 45) return 2.4;
+  return 2.85;
+}
+
+// 兵种按战场角色分类（编队设计用）
+const ROLE = {
+  fodder:  ['huangjin', 'archer'],                 // 炮灰/炮灰输出
+  fast:    ['cavalry', 'assassin'],                // 快速奇袭
+  tank:    ['shield', 'ram', 'elephant'],          // 重装前锋
+  ranged:  ['catapult', 'fireship'],               // 远程/火攻
+  elite:   ['elite'],                              // 精英
+  support: ['healer', 'sorcerer']                  // 辅助(治疗/召唤)
+};
+
+// 每章的「主力兵种谱」——决定该章出场的兵种池（有主题，不是大杂烩）
+// vanguard前锋 / core中军 / flank奇袭 / support辅助（按章节逐步解锁）
+const CHAPTER_ARMY = [
+  // 第1章 黄巾起义：黄巾为主 + 少量骑兵/盾兵，教学关
+  { vanguard:['huangjin'], core:['huangjin','archer'], flank:['cavalry'], support:[] },
+  // 第2章 群雄割据：加入盾兵/弓兵/冲车，正面推进
+  { vanguard:['shield','huangjin'], core:['archer','cavalry'], flank:['ram'], support:[] },
+  // 第3章 官渡之战：投石车远程 + 刺客奇袭 + 精英
+  { vanguard:['shield','ram'], core:['catapult','archer'], flank:['assassin','cavalry'], support:['elite'] },
+  // 第4章 赤壁之战：火船/投石车火攻 + 治疗兵续航
+  { vanguard:['ram','shield'], core:['fireship','catapult'], flank:['assassin','elite'], support:['healer'] },
+  // 第5章 三国归晋：战象/妖术师/精英全明星，多兵种协同
+  { vanguard:['elephant','ram'], core:['elite','fireship'], flank:['assassin','cavalry'], support:['sorcerer','healer'] }
+];
+
+// 从候选中取一个该关已解锁的兵种（未解锁则回退到黄巾）
+function pickAvail(cands, pool, fallback) {
+  const ok = cands.filter(t => pool.includes(t));
+  if (!ok.length) return fallback || pool[0];
+  return ok[Math.floor(Math.random() * ok.length)];
 }
 
 function makeLevel(lvl) {
@@ -76,29 +108,34 @@ function makeLevel(lvl) {
   // 波次数随关卡推进
   const waveCount = Math.min(5 + Math.floor(lvl / 4), 10);
   const pool = enemyPool(lvl);
+  const army = CHAPTER_ARMY[chapIdx];
   const waves = [];
 
   // 每波怪数按难度段递增（平滑，避免第5章数量+血量双跳变叠加成断崖）
-  const baseCount = lvl <= 10 ? 5 + lvl : (lvl <= 20 ? 20 : (lvl <= 30 ? 40 : (lvl <= 40 ? 66 : 88)));
+  const baseCount = lvl <= 10 ? 5 + lvl : (lvl <= 20 ? 20 : (lvl <= 30 ? 38 : (lvl <= 40 ? 58 : 72)));
+
   for (let w = 0; w < waveCount; w++) {
-    const comp = [];
     const count = Math.min(baseCount + w * 3, 150);
-    // 每波 2~4 个兵种组（限制超重型兵种占比，避免"纯战象/纯冲车"无解潮)
-    const HEAVY = ['elephant', 'ram', 'elite', 'catapult'];
-    const groups = Math.min(2 + Math.floor(w / 3), 4);
-    let heavyUsed = 0;
-    const heavyCap = Math.max(1, Math.floor(groups / 2));   // 重型组至多占一半
-    for (let g = 0; g < groups; g++) {
-      let t = pool[Math.floor(Math.random() * pool.length)];
-      if (HEAVY.includes(t)) {
-        if (heavyUsed >= heavyCap) { t = pool.find(x => !HEAVY.includes(x)) || 'huangjin'; }
-        else heavyUsed++;
-      }
-      comp.push({ type: t, count: Math.max(2, Math.floor(count / groups / 4)), interval: 0.8 });
+    const phase = w / Math.max(1, waveCount - 1);   // 0=开局 → 1=末波
+    const comp = [];
+    const push = (type, n, interval = 0.8) => { if (n > 0) comp.push({ type, count: Math.max(1, Math.round(n)), interval }); };
+
+    // —— 编队设计：先锋肉盾 → 中军输出 → 侧翼奇袭 → 精锐/辅助压阵 ——
+    // 先锋（每波都有，扛线）：开局多为炮灰，后期换重装
+    const vanType = pickAvail(phase < 0.4 ? army.vanguard.concat(ROLE.fodder) : army.vanguard, pool, 'huangjin');
+    push(vanType, count * 0.26, 0.7);
+    // 中军（主力输出）
+    push(pickAvail(army.core, pool, 'archer'), count * 0.30, 0.85);
+    // 侧翼奇袭（中后段才出，快速包抄）
+    if (phase > 0.25) push(pickAvail(army.flank, pool, 'cavalry'), count * 0.16, 0.5);
+    // 精锐/辅助压阵（末几波点缀，抬高潮）
+    if (phase > 0.5 && army.support.length) {
+      push(pickAvail(army.support, pool, null), Math.max(1, count * 0.05), 1.2);
     }
+    // 每 5 波加一个精英带头（中期起）
+    if ((w + 1) % 5 === 0 && lvl >= 20) push('elite', 1, 1);
+
     waves.push(comp);
-    // 每 5 波插一个精英
-    if ((w + 1) % 5 === 0 && lvl >= 20) waves[w].push({ type: 'elite', count: 1, interval: 1 });
   }
 
   // Boss 关：末波加入 Boss

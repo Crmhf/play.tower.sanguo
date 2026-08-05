@@ -30,12 +30,6 @@ const UI = {
     }
   },
 
-  setWaveBtn(enabled) {
-    const b = document.getElementById('wave-btn');
-    b.disabled = !enabled;
-    b.textContent = enabled ? '▶ 出兵' : '战斗中…';
-  },
-
   toast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -73,22 +67,36 @@ const UI = {
     const w = document.getElementById('build-wheel');
     w.innerHTML = '';
     const cap = g.towerCap(), full = g.towers.length >= cap;
-    // 上阵位提示
+    const fac = (typeof App !== 'undefined' && App.faction) || 'shu';
+    const fmeta = FACTIONS[fac] || { name:'?', color:'#888' };
+    // 顶部：当前势力 + 上阵位
     const capInfo = document.createElement('div');
     capInfo.className = 'wheel-cap';
-    capInfo.textContent = `上阵 ${g.towers.length}/${cap}` + (full ? ' · 已满，请升星/撤回' : '');
+    capInfo.innerHTML = `<b style="color:${fmeta.color}">${fmeta.name}军</b> · 上阵 ${g.towers.length}/${cap}` + (full ? ' · 已满，请升星/撤回' : '');
     w.appendChild(capInfo);
-    HERO_KEYS.forEach(k => {
-      const h = HEROES[k];
-      const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
-      const b = document.createElement('div');
-      b.className = 'wheel-item' + ((g.gold < h.cost || full) ? ' disabled' : '');
-      b.innerHTML = `<img src="${h.img}" onerror="this.style.display='none'">
-        <span class="fac-dot" style="background:${f.color}" title="${f.name}"></span>
-        <div class="wi-name">${h.name}</div><div class="wi-cost">⚡${h.cost}</div>`;
-      b.onclick = (e) => { e.stopPropagation(); if (g.buildTower(slot, k)) this.hidePanels(); };
-      w.appendChild(b);
+    // 本势力武将按 兵种(近战力量/敏捷/远程法术) 分3组
+    const keys = heroesByFaction(fac);
+    const grid = document.createElement('div');
+    grid.className = 'wheel-grid';
+    ['str','agi','mag'].forEach(arch => {
+      const ameta = ARCHETYPES[arch];
+      const label = document.createElement('div');
+      label.className = 'wheel-arch';
+      label.textContent = `${ameta.icon} ${ameta.name}`;
+      grid.appendChild(label);
+      keys.filter(k => HEROES[k].archetype === arch).forEach(k => {
+        const h = HEROES[k];
+        const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
+        const b = document.createElement('div');
+        b.className = 'wheel-item' + ((g.gold < h.cost || full) ? ' disabled' : '');
+        b.title = h.passive.text;
+        b.innerHTML = `<img src="${h.img}" onerror="this.style.display='none'">
+          <div class="wi-name">${h.name}</div><div class="wi-cost">💰${h.cost}</div>`;
+        b.onclick = (e) => { e.stopPropagation(); if (g.buildTower(slot, k)) this.hidePanels(); };
+        grid.appendChild(b);
+      });
     });
+    w.appendChild(grid);
     // 定位（按轮盘实际半宽/半高钳制，避免溢出屏幕）
     const stage = document.getElementById('stage').getBoundingClientRect();
     let x = cx - stage.left, y = cy - stage.top;
@@ -107,8 +115,8 @@ const UI = {
     p.innerHTML = `
       <div class="up-title" style="color:${t.hero.color}">${t.hero.name} · Lv${t.lvl + 1}</div>
       <div class="up-stat">伤害 ${Math.round(t.damage)} · 射程 ${Math.round(t.range)} · 攻速 ${t.rate.toFixed(1)}</div>
-      ${next ? `<button id="up-btn" class="up-btn">升级 ⚡${next.cost}</button>` : '<div class="up-max">已满级</div>'}
-      <button id="sell-btn" class="sell-btn">撤回（返积分）</button>`;
+      ${next ? `<button id="up-btn" class="up-btn">升级 💰${next.cost}</button>` : '<div class="up-max">已满级</div>'}
+      <button id="sell-btn" class="sell-btn">撤回（返金币）</button>`;
     if (next) p.querySelector('#up-btn').onclick = () => { g.upgradeTower(slot); this.showUpgradePanel(g, slot); };
     p.querySelector('#sell-btn').onclick = () => { g.sellTower(slot); this.hidePanels(); };
     p.classList.add('show');
@@ -131,16 +139,21 @@ const UI = {
     const grid = document.getElementById('help-grid');
     grid.innerHTML = '';
     if (tab === 'hero') {
-      HERO_KEYS.forEach(k => {
+      const curFac = (typeof App !== 'undefined' && App.faction) || null;
+      // 势力筛选（当前势力在前优先展示）
+      const keys = curFac
+        ? [...heroesByFaction(curFac), ...HERO_KEYS.filter(k => HEROES[k].faction !== curFac)]
+        : HERO_KEYS;
+      keys.forEach(k => {
         const h = HEROES[k];
         const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
         const l1 = h.levels[0], l3 = h.levels[2];
         const card = document.createElement('div');
-        card.className = 'help-card';
+        card.className = 'help-card' + (curFac && h.faction !== curFac ? ' dim' : '');
         card.innerHTML = `
           <img src="${h.img}" onerror="this.style.display='none'">
           <div class="hc-title" style="color:${h.color}">${h.name} · ${h.title}</div>
-          <div class="hc-role"><span class="fac-tag" style="background:${f.color}">${f.name}</span> ${h.role}　召唤 ⚡${h.cost}</div>
+          <div class="hc-role"><span class="fac-tag" style="background:${f.color}">${f.name}</span> ${h.role}　召唤 💰${h.cost}</div>
           <div class="hc-line">伤害 ${l1.damage}→${l3.damage}　射程 ${l1.range}→${l3.range}</div>
           <div class="hc-line">攻速 ${l1.rate}→${l3.rate}/秒</div>
           <div class="hc-trait">✦ ${h.passive.text}</div>
@@ -154,7 +167,7 @@ const UI = {
         card.innerHTML = `
           <img src="${e.img}" onerror="this.style.display='none'">
           <div class="hc-title">${e.name}${e.boss ? ' <span class="boss-tag">BOSS</span>' : ''}</div>
-          <div class="hc-role">击杀积分 ⚡${e.score}</div>
+          <div class="hc-role">击杀金币 💰${e.score}</div>
           <div class="hc-line">血量 ${e.hp}　速度 ${e.speed}　护甲 ${e.armor}</div>
           <div class="hc-desc">${e.ability || ''}</div>`;
         grid.appendChild(card);

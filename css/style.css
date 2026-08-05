@@ -22,6 +22,19 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 /* 菜单背景上的暗角渐变，增强层次又不至于全黑 */
 .menu-bg::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 42%, rgba(0,0,0,0) 30%, rgba(6,8,16,.55) 78%, rgba(6,8,16,.9) 100%); }
 #menu-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
+
+/* ---- 首页势力选择 ---- */
+.faction-select { margin:4px 0 18px; }
+.fs-tip { text-align:center; font-size:13px; color:#c9b48a; letter-spacing:3px; margin-bottom:10px; }
+.fs-row { display:flex; gap:12px; }
+.fs-card { width:118px; background:rgba(14,17,28,.85); border:2px solid #4a4030; border-radius:12px;
+  padding:12px 10px; text-align:center; cursor:pointer; transition:.18s; }
+.fs-card:hover { transform:translateY(-3px); border-color:var(--fac,#ffd98a); }
+.fs-card.sel { border-color:var(--fac,#ffd98a); background:rgba(20,24,38,.95);
+  box-shadow:0 0 18px 2px var(--fac, rgba(255,170,60,.4)); transform:translateY(-3px); }
+.fs-name { font-size:26px; font-weight:900; color:var(--fac,#ffd98a); letter-spacing:4px; }
+.fs-count { font-size:12px; color:#c9b48a; margin:4px 0 6px; }
+.fs-blurb { font-size:10px; color:#9a8f75; line-height:1.4; }
 #loading { position:relative; z-index:2; }
 .game-title { font-size:88px; letter-spacing:12px; color:#ffd98a; text-shadow:0 0 30px #ff8c00,0 4px 8px #000; font-weight:900; }
 .game-sub { letter-spacing:6px; color:#c9b48a; margin:14px 0 40px; }
@@ -62,17 +75,23 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .wave-btn:disabled { opacity:.45; cursor:default; }
 .wave-btn:not(:disabled):hover { filter:brightness(1.25); }
 
-/* 建造轮盘 */
-#build-wheel { position:absolute; display:none; gap:8px; transform:translate(-50%,-50%); z-index:10; }
-#build-wheel.show { display:flex; flex-wrap:wrap; max-width:560px; }
-.wheel-cap { flex:0 0 100%; text-align:center; font-size:12px; color:#ffd98a;
-  background:rgba(216,169,58,.12); border:1px solid #6a5a35; border-radius:6px; padding:3px 6px; margin-bottom:2px; }
-.wheel-item { width:78px; background:rgba(15,18,28,.95); border:1px solid #6a5a35; border-radius:10px; padding:6px; text-align:center; cursor:pointer; }
-.wheel-item:hover { border-color:#ffd98a; }
-.wheel-item.disabled { opacity:.4; cursor:not-allowed; }
-.wheel-item img { width:52px; height:52px; object-fit:cover; border-radius:6px; background:#000; }
-.wi-name { font-size:12px; color:#ffd98a; }
-.wi-cost { font-size:11px; color:#c9b48a; }
+/* 建造轮盘（紧凑多列网格，12 将全部可见） */
+#build-wheel { position:absolute; display:none; transform:translate(-50%,-50%); z-index:10; }
+#build-wheel.show { display:block;
+  background:rgba(10,13,22,.96); border:1px solid #6a5a35; border-radius:12px; padding:8px;
+  box-shadow:0 8px 30px rgba(0,0,0,.6); }
+.wheel-cap { text-align:center; font-size:12px; color:#ffd98a;
+  background:rgba(216,169,58,.12); border:1px solid #6a5a35; border-radius:6px; padding:2px 6px; margin-bottom:6px; }
+.wheel-grid { display:grid; grid-template-columns:repeat(3,66px); gap:5px; }
+.wheel-arch { grid-column:1/-1; font-size:11px; color:#8fd8ff; letter-spacing:2px; margin-top:2px;
+  border-bottom:1px solid #3a3120; padding-bottom:1px; }
+.wheel-item { position:relative; background:rgba(15,18,28,.95); border:1px solid #6a5a35; border-radius:8px; padding:4px 3px; text-align:center; cursor:pointer; }
+.wheel-item:hover { border-color:#ffd98a; transform:scale(1.06); }
+.wheel-item.disabled { opacity:.38; cursor:not-allowed; }
+.wheel-item img { width:40px; height:40px; object-fit:cover; border-radius:5px; background:#000;
+  filter:brightness(1.35) contrast(1.12) saturate(1.1); }
+.wi-name { font-size:11px; color:#ffd98a; line-height:1.2; }
+.wi-cost { font-size:10px; color:#c9b48a; }
 
 /* 升级面板 */
 #upgrade-panel { position:absolute; right:16px; top:60px; width:210px; display:none; background:rgba(15,18,28,.96); border:1px solid #6a5a35; border-radius:12px; padding:16px; z-index:10; }
@@ -121,13 +140,20 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .help-tip { font-size:13px; color:#a89a7a; margin-bottom:14px; line-height:1.5; }
 #help-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; overflow-y:auto; padding-right:4px; }
 .help-card { background:rgba(15,18,28,.9); border:1px solid #4a4030; border-radius:12px; padding:12px; text-align:center; }
-.help-card img { width:100%; height:110px; object-fit:cover; border-radius:8px; background:#000; margin-bottom:8px; }
+/* 立绘提亮增对比 + 古风亮底衬托（去底后立绘偏暗，需提亮才能在深底上凸显） */
+.help-card img { width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px;
+  background:radial-gradient(ellipse at 50% 38%, #4a4030 0%, #2a2418 55%, #17130c 100%);
+  filter:brightness(1.5) contrast(1.18) saturate(1.12);
+  box-shadow:inset 0 0 0 1px rgba(216,169,58,.35), inset 0 -14px 24px rgba(0,0,0,.4); }
+/* 怪物立绘同样提亮 */
+.help-card.enemy img { filter:brightness(1.35) contrast(1.15) saturate(1.1); }
 .hc-title { font-size:17px; font-weight:700; color:#ffd98a; margin-bottom:4px; }
 .hc-role { font-size:12px; color:#8fd8ff; margin-bottom:6px; }
 .hc-line { font-size:12px; color:#b9ad8f; line-height:1.5; }
 .hc-trait { font-size:12px; color:#7ee08a; margin-top:6px; }
 .hc-desc { font-size:11px; color:#9a8f75; margin-top:6px; line-height:1.4; }
 .help-card.enemy .hc-title { color:#ff9a8a; }
+.help-card.dim { opacity:.55; }
 .boss-tag { font-size:10px; background:#c0392b; color:#fff; border-radius:4px; padding:1px 5px; vertical-align:middle; }
 
 /* ---------- 势力羁绊 ---------- */
@@ -240,6 +266,9 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 /* ---- 选关页：氛围背景 + 战役进度条 ---- */
 #screen-levels { background:radial-gradient(ellipse at 50% 0%,#1a2133,#0b0f1a 70%); overflow-y:auto; }
 .campaign-bar { display:flex; align-items:center; gap:8px; margin:6px 0 4px; }
+.levels-faction { font-size:14px; color:#c9b48a; margin:2px 0 8px; }
+.lf-change { color:#8fd8ff; cursor:pointer; text-decoration:underline; }
+.lf-change:hover { color:#ffd98a; }
 .campaign-label { font-size:14px; color:var(--gold-dim); letter-spacing:2px; margin-right:6px; }
 .campaign-seg { height:8px; flex:1; max-width:120px; border-radius:5px; background:#1c2333;
   border:1px solid #3a3120; cursor:pointer; position:relative; transition:.15s; }

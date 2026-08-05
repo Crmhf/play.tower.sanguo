@@ -22,41 +22,49 @@ const Synergy = {
   // kind: 'buff' 增益 | 'nerf' 削弱 | 'none' 无效果（仅叙事）
   // mods/debuff: 全场数值修正；text: 图鉴/HUD 展示文案
   combos: [
-    // —— 增益组合 ——
+    // —— 增益组合（同势力内可触发）——
     { need:['guanyu','zhangfei'], kind:'buff',
       mods:{ damage:0.12 }, text:'桃园结义 · 关羽+张飞：伤害+12%' },
     { need:['guanyu','zhangfei','zhaoyun'], kind:'buff',
       mods:{ damage:0.18, attackSpeed:0.10 }, text:'五虎上将 · 关张赵：伤害+18% 攻速+10%' },
-    { need:['zhugeliang','pangtong'], kind:'buff',
-      mods:{ splash:0.25 }, text:'卧龙凤雏 · 诸葛亮+庞统：溅射+25%' },
     { need:['zhaoyun','machao'], kind:'buff',
       mods:{ attackSpeed:0.15 }, text:'西凉铁骑 · 赵云+马超：攻速+15%' },
     { need:['huangzhong','machao'], kind:'buff',
       mods:{ range:0.15 }, text:'神射连营 · 黄忠+马超：射程+15%' },
-    { need:['dianwei','zhoutai'], kind:'buff',
-      mods:{ damage:0.10, range:0.08 }, text:'忠勇死士 · 典韦+周泰：伤害+10% 射程+8%' },
-    { need:['simayi','zhugeliang'], kind:'buff',
-      mods:{ attackSpeed:0.12, range:0.10 }, text:'龙争虎斗 · 司马懿+诸葛亮：攻速+12% 射程+10%' },
+    { need:['zhugeliang','jiangwei'], kind:'buff',
+      mods:{ splash:0.25 }, text:'薪火相传 · 诸葛亮+姜维：溅射+25%' },
+    { need:['dianwei','xuchu'], kind:'buff',
+      mods:{ damage:0.12 }, text:'虎卫双雄 · 典韦+许褚：伤害+12%' },
+    { need:['zhangliao','xiahouyuan'], kind:'buff',
+      mods:{ attackSpeed:0.12, range:0.08 }, text:'疾风迅雷 · 张辽+夏侯渊：攻速+12% 射程+8%' },
+    { need:['simayi','guojia'], kind:'buff',
+      mods:{ attackSpeed:0.12, range:0.10 }, text:'鬼谋神算 · 司马懿+郭嘉：攻速+12% 射程+10%' },
+    { need:['ganning','taishici'], kind:'buff',
+      mods:{ damage:0.12, attackSpeed:0.08 }, text:'江表虎臣 · 甘宁+太史慈：伤害+12% 攻速+8%' },
+    { need:['luxun','lvmeng'], kind:'buff',
+      mods:{ splash:0.22 }, text:'白衣火计 · 陆逊+吕蒙：溅射+22%' },
     { need:['lvbu','diaochan'], kind:'buff',
       mods:{ crit:0.15, damage:0.10 }, text:'美人计 · 吕布+貂蝉：暴击+15% 伤害+10%' },
+    { need:['yanliang_h','wenchou_h'], kind:'buff',
+      mods:{ damage:0.14 }, text:'河北双雄 · 颜良+文丑：伤害+14%' },
 
-    // —— 削弱组合（内耗）——
-    { need:['lvbu','guanyu'], kind:'nerf',
-      debuff:{ damage:0.12 }, text:'三英战吕布 · 吕布遇关羽：互不相让 伤害-12%' },
-    { need:['lvbu','zhangfei'], kind:'nerf',
-      debuff:{ damage:0.10 }, text:'宿敌相逢 · 吕布+张飞：怒火攻心 伤害-10%' },
-    { need:['zhugeliang','simayi','pangtong'], kind:'nerf',
-      debuff:{ damage:0.15 }, text:'三谋相忌 · 诸葛+司马+庞统：互相掣肘 伤害-15%' },
-    { need:['machao','dianwei'], kind:'nerf',
-      debuff:{ attackSpeed:0.12 }, text:'渭水恶战 · 马超+典韦：各为其主 攻速-12%' },
-    { need:['lvbu','dianwei','zhoutai'], kind:'nerf',
-      debuff:{ damage:0.18 }, text:'群英伐吕 · 吕布遇典韦周泰：寡不敌众 伤害-18%' },
+    // —— 削弱组合（同势力内耗）——
+    { need:['lvbu','huaxiong'], kind:'nerf',
+      debuff:{ damage:0.12 }, text:'争功相忌 · 吕布+华雄：互不相让 伤害-12%' },
+    { need:['zhugeliang','huangyueying'], kind:'nerf',
+      debuff:{ attackSpeed:0.10 }, text:'琴瑟分神 · 诸葛+黄月英：顾此失彼 攻速-10%' },
+    { need:['simayi','xunyu'], kind:'nerf',
+      debuff:{ damage:0.12 }, text:'道不同谋 · 司马懿+荀彧：貌合神离 伤害-12%' },
+    { need:['luxun','zhugejin'], kind:'nerf',
+      debuff:{ range:0.12 }, text:'文武相轻 · 陆逊+诸葛瑾：互不服气 射程-12%' },
+    { need:['guanyu','weiyan'], kind:'nerf',
+      debuff:{ damage:0.10 }, text:'傲上之争 · 关羽+魏延：各不相让 伤害-10%' },
 
     // —— 中和组合（同场不增不减，仅叙事）——
     { need:['zhaoyun','diaochan'], kind:'none',
       text:'英雄美人 · 赵云+貂蝉：各展所长（无羁绊）' },
-    { need:['huangzhong','zhoutai'], kind:'none',
-      text:'老将相惜 · 黄忠+周泰：井水不犯河水（无羁绊）' }
+    { need:['huangzhong','dingfeng'], kind:'none',
+      text:'老将相惜 · 黄忠+丁奉：井水不犯河水（无羁绊）' }
   ],
 
   // ---------- 汇总当前在场武将的全部羁绊 ----------

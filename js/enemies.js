@@ -1,6 +1,6 @@
 // 12 兵种 + 章节 Boss
 // 特殊行为标记：heal(治疗) stealth(隐身) summon(召唤) charge(冲撞) burn(烧地) slow_aura(减速)
-// score=击杀基础积分（实际积分 = score × 关卡难度系数）；ability=图鉴能力描述
+// score=击杀基础金币（实际金币 = score × 关卡难度系数）；ability=图鉴能力描述
 const ENEMIES = {
   // 基础 5 种（第1章）
   huangjin: { id:'huangjin', name:'黄巾兵', img:'assets/img/enemies/huangjin.webp',

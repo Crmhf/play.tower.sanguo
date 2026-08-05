@@ -2,9 +2,12 @@
 const App = {
   game: null, raf: null, last: 0,
   unlocked: Math.max(1, parseInt(localStorage.getItem('sg_unlocked') || '1', 10) || 1),
+  faction: localStorage.getItem('sg_faction') || 'shu',   // 本局统军势力（首页可选）
 
   start() {
     this._bindMenu();
+    this._renderFactions();
+    this._renderParade();
     this.showScreen('menu');
     // 加载素材
     const bar = document.getElementById('load-bar');
@@ -41,9 +44,53 @@ const App = {
     };
   },
 
+  // 首页名将剪影轮播：36 将，复制一份首尾相接无缝滚动
+  _renderParade() {
+    const track = document.getElementById('parade-track');
+    if (!track) return;
+    const imgs = HERO_KEYS.map(k => `<img src="${HEROES[k].img}" alt="">`).join('');
+    track.innerHTML = imgs + imgs;   // 复制一份，translateX(-50%) 无缝循环
+  },
+
+  // 首页势力选择：4 张势力卡，选定高亮 + 存 localStorage
+  _renderFactions() {
+    const row = document.getElementById('faction-row');
+    if (!row) return;
+    row.innerHTML = '';
+    const BLURB = {
+      wei: '中原霸主 · 人才济济', shu: '仁义之师 · 五虎上将',
+      wu:  '江东基业 · 水陆并进', qun: '群雄并起 · 各显神通'
+    };
+    Object.keys(FACTIONS).forEach(f => {
+      const meta = FACTIONS[f];
+      const n = heroesByFaction(f).length;
+      const card = document.createElement('div');
+      card.className = 'fs-card' + (this.faction === f ? ' sel' : '');
+      card.style.setProperty('--fac', meta.color);
+      card.innerHTML = `<div class="fs-name">${meta.name}</div>
+        <div class="fs-count">${n} 将</div>
+        <div class="fs-blurb">${BLURB[f] || ''}</div>`;
+      card.onclick = () => {
+        this.faction = f;
+        localStorage.setItem('sg_faction', f);
+        AudioMan.play('attack_sword', 0.2);
+        this._renderFactions();
+      };
+      row.appendChild(card);
+    });
+  },
+
   _renderLevels() {
     const box = document.getElementById('level-grid');
     box.innerHTML = '';
+    // 当前势力标识（点击可回首页换势力）
+    const lf = document.getElementById('levels-faction');
+    if (lf) {
+      const fm = FACTIONS[this.faction] || { name:'?', color:'#888' };
+      lf.innerHTML = `当前统军：<b style="color:${fm.color}">${fm.name}军</b>（${heroesByFaction(this.faction).length} 将） · <span class="lf-change" id="lf-change">更换势力</span>`;
+      const ch = document.getElementById('lf-change');
+      if (ch) ch.onclick = () => { this.showScreen('menu'); };
+    }
     // 战役进度条（5 章分段，点刻度可跳到对应章节块）
     this._renderCampaignBar();
     const TERRAIN = { plain:'平原', forest:'森林', river:'河谷', volcano:'火山', snow:'雪原', boss:'决战' };
@@ -135,13 +182,11 @@ const App = {
     container.innerHTML = '';
     if (this.game) this.game.destroy();
     this.game = new Game(container, levelIdx);
-    UI.setWaveBtn(true);
     UI.hidePanels();
     UI.hideHelp();
     document.getElementById('result').classList.remove('show');
 
-    // 绑定战斗 UI
-    document.getElementById('wave-btn').onclick = () => this.game.startWave();
+    // 绑定战斗 UI（出兵为自动，无需出兵按钮）
     const speedBtn = document.getElementById('speed-btn');
     speedBtn.textContent = '×1';                       // 每局重置倍率显示
     speedBtn.onclick = (e) => {
@@ -155,7 +200,6 @@ const App = {
 
     // 键盘快捷键
     window.onkeydown = (e) => {
-      if (e.code === 'Enter' && this.game && (this.game.state === 'build' || this.game.state === 'wave')) this.game.startWave();
       if (e.code === 'Escape') UI.hideHelp();
     };
 
@@ -177,6 +221,8 @@ const App = {
     const loop = (t) => { step(t); this.raf = requestAnimationFrame(loop); };
     this.raf = requestAnimationFrame(loop);
     this.timer = setInterval(() => { if (document.hidden) step(performance.now()); }, 33);
+    // 自动出兵：开局给一段布防整备时间后第一波自动来袭
+    this.game._autoWaveT = 8.0;
   },
 
   _stopLoop() {
