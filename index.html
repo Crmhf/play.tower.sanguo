@@ -19,7 +19,7 @@
       <p class="game-sub">TOWER OF THREE KINGDOMS</p>
       <button id="btn-start" class="big-btn">进入乱世</button>
       <button id="btn-help" class="help-btn">📖 武将图鉴</button>
-      <p class="menu-tip">50 关史诗战役 · 8 名将积分召唤上阵 · 击杀怪物赚取积分升级</p>
+      <p class="menu-tip">50 关史诗战役 · 12 名将积分召唤上阵 · 势力羁绊相生相克</p>
     </div>
     <button id="btn-mute" class="mute-btn">🔊</button>
   </section>
@@ -39,6 +39,7 @@
       <span class="hud-item">❤️ <b id="hud-lives">0</b></span>
       <span class="hud-item">🌊 <b id="hud-wave">0/0</b></span>
       <span class="hud-spacer"></span>
+      <span id="hud-synergy" class="hud-synergy" title="势力羁绊"></span>
       <button id="btn-help3" class="hud-btn">📖 图鉴</button>
       <button id="speed-btn" class="hud-btn">×1</button>
       <button id="quit-btn" class="hud-btn">退出</button>
@@ -77,22 +78,24 @@
       <div class="help-tabs">
         <button class="help-tab active" data-tab="hero">⚔️ 武将图鉴</button>
         <button class="help-tab" data-tab="enemy">👹 怪物图鉴</button>
+        <button class="help-tab" data-tab="synergy">🤝 势力羁绊</button>
       </div>
       <button id="help-close">✕</button>
     </div>
-    <div class="help-tip">击杀怪物获得积分（积分 = 怪物分值 × 关卡难度），用积分召唤武将上阵、并为其升星强化。</div>
+    <div class="help-tip">击杀怪物获得积分（积分 = 怪物分值 × 关卡难度），用积分召唤武将上阵、并为其升星强化。同势力武将齐上阵触发羁绊增益，部分武将同场会内耗削弱。</div>
     <div id="help-grid"></div>
   </div>
 </div>
 
-<script src="js/heroes.js?v=3"></script>
-<script src="js/enemies.js?v=3"></script>
-<script src="js/levels.js?v=3"></script>
-<script src="js/tech.js?v=3"></script>
-<script src="js/assets.js?v=3"></script>
-<script src="js/audio.js?v=3"></script>
-<script src="js/ui.js?v=3"></script>
-<script src="js/game.js?v=3"></script>
-<script src="js/main.js?v=3"></script>
+<script src="js/heroes.js?v=4"></script>
+<script src="js/enemies.js?v=4"></script>
+<script src="js/levels.js?v=4"></script>
+<script src="js/tech.js?v=4"></script>
+<script src="js/synergy.js?v=4"></script>
+<script src="js/assets.js?v=4"></script>
+<script src="js/audio.js?v=4"></script>
+<script src="js/ui.js?v=4"></script>
+<script src="js/game.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
 </body>
 </html>

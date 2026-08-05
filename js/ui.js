@@ -9,6 +9,16 @@ const UI = {
     document.getElementById('hud-wave').textContent =
       Math.max(0, g.waveIdx + 1) + '/' + g.level.waves.length;
     document.getElementById('hud-level').textContent = '第 ' + g.level.level + ' 关';
+    // 势力羁绊提示
+    const syn = document.getElementById('hud-synergy');
+    if (syn && g.synergy) {
+      if (g.synergy.active.length) {
+        const buff = g.synergy.active.filter(a => a.kind !== 'nerf').length;
+        const nerf = g.synergy.active.filter(a => a.kind === 'nerf').length;
+        syn.textContent = '🤝' + buff + (nerf ? ' ⚠️' + nerf : '');
+        syn.title = g.synergy.active.map(a => a.text).join('\n');
+      } else { syn.textContent = ''; syn.title = ''; }
+    }
   },
 
   setWaveBtn(enabled) {
@@ -36,9 +46,11 @@ const UI = {
     w.innerHTML = '';
     HERO_KEYS.forEach(k => {
       const h = HEROES[k];
+      const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
       const b = document.createElement('div');
       b.className = 'wheel-item' + (g.gold < h.cost ? ' disabled' : '');
       b.innerHTML = `<img src="${h.img}" onerror="this.style.display='none'">
+        <span class="fac-dot" style="background:${f.color}" title="${f.name}"></span>
         <div class="wi-name">${h.name}</div><div class="wi-cost">⚡${h.cost}</div>`;
       b.onclick = (e) => { e.stopPropagation(); if (g.buildTower(slot, k)) this.hidePanels(); };
       w.appendChild(b);
@@ -86,20 +98,21 @@ const UI = {
     if (tab === 'hero') {
       HERO_KEYS.forEach(k => {
         const h = HEROES[k];
+        const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
         const l1 = h.levels[0], l3 = h.levels[2];
         const card = document.createElement('div');
         card.className = 'help-card';
         card.innerHTML = `
           <img src="${h.img}" onerror="this.style.display='none'">
           <div class="hc-title" style="color:${h.color}">${h.name} · ${h.title}</div>
-          <div class="hc-role">${h.role}　召唤 ⚡${h.cost}</div>
+          <div class="hc-role"><span class="fac-tag" style="background:${f.color}">${f.name}</span> ${h.role}　召唤 ⚡${h.cost}</div>
           <div class="hc-line">伤害 ${l1.damage}→${l3.damage}　射程 ${l1.range}→${l3.range}</div>
           <div class="hc-line">攻速 ${l1.rate}→${l3.rate}/秒</div>
           <div class="hc-trait">✦ ${h.passive.text}</div>
           <div class="hc-desc">${h.desc}</div>`;
         grid.appendChild(card);
       });
-    } else {
+    } else if (tab === 'enemy') {
       Object.values(ENEMIES).forEach(e => {
         const card = document.createElement('div');
         card.className = 'help-card enemy';
@@ -111,7 +124,30 @@ const UI = {
           <div class="hc-desc">${e.ability || ''}</div>`;
         grid.appendChild(card);
       });
+    } else {
+      this._renderSynergy(grid);
     }
+  },
+
+  // 势力羁绊说明页：阵营规则 + 全部组合
+  _renderSynergy(grid) {
+    const mk = (html, cls) => { const d = document.createElement('div'); d.className = 'syn-card ' + (cls||''); d.innerHTML = html; grid.appendChild(d); };
+    // 阵营羁绊规则
+    mk(`<div class="syn-h">🤝 阵营羁绊（同势力上阵人数）</div>
+        <div class="syn-line">2 人 · 双璧小成：伤害 +10%</div>
+        <div class="syn-line">3 人 · 三杰大成：伤害 +18% 攻速 +8%</div>
+        <div class="syn-line">4 人 · 四雄鼎盛：伤害 +30% 攻速 +12%</div>
+        <div class="syn-sub">同一武将重复上阵只计 1 人；魏/蜀/吴/群 各自独立计算。</div>`, 'syn-wide');
+    // 组合羁绊
+    const grp = { buff:[], nerf:[], none:[] };
+    Synergy.combos.forEach(c => grp[c.kind].push(c));
+    const names = c => c.need.map(id => HEROES[id].name).join(' + ');
+    mk(`<div class="syn-h">✨ 增益组合</div>` + grp.buff.map(c =>
+        `<div class="syn-line"><b>${names(c)}</b> — ${c.text.split('：')[1] || ''}</div>`).join(''), 'syn-wide syn-buff');
+    mk(`<div class="syn-h">⚠️ 内耗组合（同场削弱）</div>` + grp.nerf.map(c =>
+        `<div class="syn-line"><b>${names(c)}</b> — ${c.text.split('：')[1] || ''}</div>`).join(''), 'syn-wide syn-nerf');
+    mk(`<div class="syn-h">⚖️ 中和组合（无效果）</div>` + grp.none.map(c =>
+        `<div class="syn-line"><b>${names(c)}</b></div>`).join(''), 'syn-wide syn-none');
   },
 
   showResult(won, g) {

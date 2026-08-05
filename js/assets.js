@@ -2,18 +2,26 @@
 const Assets = {
   images: {}, textures: {},
 
-  // 需要去背景的精灵（角色/塔/敌人/Boss 立绘）
+  // 需要去背景的精灵（角色/敌人/Boss 立绘）
   _isSprite(u) {
-    return /heroes|towers|enemies|boss\//.test(u);
+    return /heroes|enemies|boss\//.test(u);
   },
 
   // 用 canvas 把接近纯黑/深灰的背景像素转为透明
+  // 性能：先把图缩到 ≤128px 再做逐像素处理（webp 源图已小，进一步避免大图卡顿）
   _chroma(img) {
+    const MAX = 128;
+    let w = img.width, h = img.height;
+    if (Math.max(w, h) > MAX) {
+      const r = MAX / Math.max(w, h);
+      w = Math.max(1, Math.round(w * r));
+      h = Math.max(1, Math.round(h * r));
+    }
     const c = document.createElement('canvas');
-    c.width = img.width; c.height = img.height;
+    c.width = w; c.height = h;
     const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const d = ctx.getImageData(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, w, h);
+    const d = ctx.getImageData(0, 0, w, h);
     const px = d.data;
     for (let i = 0; i < px.length; i += 4) {
       const r = px[i], g = px[i + 1], b = px[i + 2];

@@ -9,6 +9,9 @@ class Game {
     // 科技树加成
     this.tech = Tech.mods();
 
+    // 势力羁绊（在场武将联动加成/削弱，build/sell 时重算）
+    this.synergy = { mods:{}, debuff:{}, active:[], count:{wei:0,shu:0,wu:0,qun:0} };
+
     // 资源（积分，应用科技）
     this.gold = this.level.startGold + this.tech.startGold;
     this.lives = Math.round(this.level.startLives * (1 + this.tech.livesMult));
@@ -198,22 +201,36 @@ class Game {
     };
     slot.tower = tower;
     this.towers.push(tower);
+    this._recalcSynergy();
     AudioMan.play('attack_sword', 0.3);
     this._updateHud();
     return true;
   }
 
+  // 重算势力羁绊：在场武将变化时调用，重新计算全场加成并把结果叠回每座塔
+  _recalcSynergy() {
+    const fielded = this.towers.map(t => t.heroKey);
+    this.synergy = Synergy.compute(fielded);
+    // 把新羁绊数值叠回所有塔（保持已升的星级不变）
+    this.towers.forEach(t => Object.assign(t, this._towerStats(t.hero, t.lvl)));
+  }
+
   _towerStats(hero, lvl) {
     const s = hero.levels[lvl];
     const p = hero.passive;
-    let dmg = s.damage * (1 + (p.damage || 0) + this.tech.damage);
-    let rate = s.rate * (1 + (p.attackSpeed || 0) + this.tech.attackSpeed);
-    let range = s.range * (1 + (p.range || 0) + this.tech.range);
+    const syn = this.synergy.mods, deb = this.synergy.debuff;
+    // 增益（个体特性 + 科技 + 羁绊）− 削弱（羁绊内耗），保底不为负
+    const dmgMul  = Math.max(0.2, 1 + (p.damage||0)      + this.tech.damage      + (syn.damage||0)      - (deb.damage||0));
+    const rateMul = Math.max(0.2, 1 + (p.attackSpeed||0) + this.tech.attackSpeed + (syn.attackSpeed||0) - (deb.attackSpeed||0));
+    const rngMul  = Math.max(0.2, 1 + (p.range||0)       + this.tech.range       + (syn.range||0)       - (deb.range||0));
+    let dmg = s.damage * dmgMul;
+    let rate = s.rate * rateMul;
+    let range = s.range * rngMul;
     return { damage: dmg, range, rate,
-             slow: s.slow ? Math.min(0.8, s.slow * (1 + (p.slow || 0))) : 0,
+             slow: s.slow ? Math.min(0.8, s.slow * (1 + (p.slow||0) + (syn.slow||0))) : 0,
              slowTime: s.slowTime,
-             splash: hero.splash ? hero.splash * (1 + (p.splash || 0)) : 0,
-             pierce: (hero.pierce || 0) + this.tech.pierce,
+             splash: hero.splash ? hero.splash * (1 + (p.splash||0) + (syn.splash||0)) : 0,
+             pierce: (hero.pierce||0) + this.tech.pierce + (syn.pierce||0),
              bossKiller: !!hero.bossKiller,
              projColor: hero.projColor };
   }
@@ -242,6 +259,7 @@ class Game {
     this.scene.remove(t.mesh);
     this.towers = this.towers.filter(x => x !== t);
     slot.tower = null; slot.mesh.visible = true;
+    this._recalcSynergy();
     this._updateHud();
   }
 
@@ -468,7 +486,7 @@ class Game {
   }
 
   _fire(t, target) {
-    const crit = Math.random() < ((t.hero.passive.crit || 0) + this.tech.crit);
+    const crit = Math.random() < ((t.hero.passive.crit || 0) + this.tech.crit + (this.synergy.mods.crit || 0));
     let dmg = t.damage * (crit ? 2 : 1);
     if (t.bossKiller && target.def.boss) dmg *= 2;   // 吕布等克 Boss
     const m = new THREE.Mesh(

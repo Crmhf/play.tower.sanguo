@@ -7,7 +7,7 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .screen.active { display:flex; }
 
 /* ---------- 主菜单 ---------- */
-.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.jpg') center/cover; filter:brightness(.55); z-index:-1; }
+.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.webp') center/cover; filter:brightness(.55); z-index:-1; }
 #screen-menu { justify-content:center; }
 .game-title { font-size:88px; letter-spacing:12px; color:#ffd98a; text-shadow:0 0 30px #ff8c00,0 4px 8px #000; font-weight:900; }
 .game-sub { letter-spacing:6px; color:#c9b48a; margin:14px 0 40px; }
@@ -113,3 +113,19 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .hc-desc { font-size:11px; color:#9a8f75; margin-top:6px; line-height:1.4; }
 .help-card.enemy .hc-title { color:#ff9a8a; }
 .boss-tag { font-size:10px; background:#c0392b; color:#fff; border-radius:4px; padding:1px 5px; vertical-align:middle; }
+
+/* ---------- 势力羁绊 ---------- */
+.hud-synergy { font-size:14px; color:#ffd98a; cursor:help; white-space:pre; }
+.fac-tag { display:inline-block; font-size:10px; color:#0b0f1a; font-weight:700; border-radius:4px; padding:0 5px; margin-right:4px; vertical-align:middle; }
+.wheel-item { position:relative; }
+.fac-dot { position:absolute; top:4px; left:4px; width:12px; height:12px; border-radius:50%; border:1px solid #000; }
+
+/* 羁绊说明页卡片 */
+.syn-card { grid-column:span 4; background:rgba(15,18,28,.9); border:1px solid #4a4030; border-radius:12px; padding:14px 18px; text-align:left; }
+.syn-h { font-size:16px; font-weight:700; color:#ffd98a; margin-bottom:8px; }
+.syn-line { font-size:13px; color:#c9b48a; line-height:1.7; }
+.syn-line b { color:#e8e0cf; }
+.syn-sub { font-size:11px; color:#9a8f75; margin-top:6px; }
+.syn-buff { border-color:#3a7a4a; } .syn-buff .syn-h { color:#7ee08a; }
+.syn-nerf { border-color:#8a3a3a; } .syn-nerf .syn-h { color:#ff8a8a; }
+.syn-none { border-color:#5a5a6a; } .syn-none .syn-h { color:#b9c0d8; }
