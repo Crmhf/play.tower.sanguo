@@ -5,14 +5,14 @@ const TECH_TREE = [
   { id:'atk_dmg',    cat:'进攻', name:'单体伤害 +15%',     apply:m=>m.damage+=0.15 },
   { id:'pierce',     cat:'进攻', name:'穿透 +1',           apply:m=>m.pierce+=1 },
   { id:'crit',       cat:'进攻', name:'暴击率 +5%',        apply:m=>m.crit+=0.05 },
-  { id:'cdr',        cat:'进攻', name:'技能冷却 -15%',     apply:m=>m.cooldown+=0.15 },
+  { id:'range',      cat:'进攻', name:'全军射程 +12%',     apply:m=>m.range+=0.12 },
   // 防御
   { id:'hp',         cat:'防御', name:'城防血量 +20%',     apply:m=>m.livesMult+=0.20 },
   { id:'regen',      cat:'防御', name:'城防每波回复 +5',   apply:m=>m.regen+=5 },
   { id:'revive',     cat:'防御', name:'复活币 +1',         apply:m=>m.revive+=1 },
   // 经济
-  { id:'gold',       cat:'经济', name:'杀怪金币 +20%',     apply:m=>m.goldMult+=0.20 },
-  { id:'startgold',  cat:'经济', name:'起始金币 +100',     apply:m=>m.startGold+=100 },
+  { id:'gold',       cat:'经济', name:'杀怪积分 +20%',     apply:m=>m.goldMult+=0.20 },
+  { id:'startgold',  cat:'经济', name:'起始积分 +100',     apply:m=>m.startGold+=100 },
   { id:'interest',   cat:'经济', name:'每波利息 +5',       apply:m=>m.interest+=5 }
 ];
 
@@ -24,7 +24,7 @@ const Tech = {
 
   // 汇总所有已选科技加成
   mods() {
-    const m = { attackSpeed:0, damage:0, pierce:0, crit:0, cooldown:0,
+    const m = { attackSpeed:0, damage:0, pierce:0, crit:0, range:0,
                 livesMult:0, regen:0, revive:0, goldMult:0, startGold:0, interest:0 };
     this.owned().forEach(id => {
       const t = TECH_TREE.find(x => x.id === id);

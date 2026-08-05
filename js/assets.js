@@ -33,8 +33,7 @@ const Assets = {
 
   load(onProgress) {
     const urls = new Set();
-    Object.values(HEROES).forEach(h => { urls.add(h.img); urls.add(h.skill.effectImg); });
-    Object.values(TOWERS).forEach(t => urls.add(t.img));
+    Object.values(HEROES).forEach(h => urls.add(h.img));
     Object.values(ENEMIES).forEach(e => urls.add(e.img));
     Object.values(BG_IMG).forEach(u => urls.add(u));
 

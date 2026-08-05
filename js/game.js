@@ -1,19 +1,18 @@
 // 核心战斗引擎：Three.js 正交渲染 + 塔防逻辑 + 粒子 + 屏震
+// 武将以积分召唤上阵当「塔」，固定槽位，可升 3 星
 class Game {
-  constructor(container, heroId, levelIdx) {
+  constructor(container, levelIdx) {
     this.container = container;
-    this.hero = HEROES[heroId];
     this.levelIdx = levelIdx;
     this.level = LEVELS[levelIdx];
 
     // 科技树加成
     this.tech = Tech.mods();
 
-    // 资源（应用科技）
+    // 资源（积分，应用科技）
     this.gold = this.level.startGold + this.tech.startGold;
     this.lives = Math.round(this.level.startLives * (1 + this.tech.livesMult));
     this.maxLives = this.lives;
-    this.passive = this.hero.passive;
 
     // 状态
     this.state = 'build';            // build | wave | won | lost
@@ -23,8 +22,6 @@ class Game {
     this.towers = [];
     this.projectiles = [];
     this.particles = [];
-    this.effects = [];               // 技能特效
-    this.skillCd = 0;
     this.shake = 0;
     this.time = 0;
     this.speed = 1;
@@ -181,23 +178,23 @@ class Game {
     }
   }
 
-  // ---------- 建塔 / 升级 ----------
-  buildTower(slot, typeId) {
-    const def = TOWERS[typeId];
-    if (this.gold < def.cost) { UI.toast('金币不足'); return false; }
-    this.gold -= def.cost;
-    const lvl = def.levels[0];
-    const tex = Assets.tex(def.img);
+  // ---------- 召唤武将 / 升级 ----------
+  buildTower(slot, heroKey) {
+    const hero = HEROES[heroKey];
+    if (!hero) return false;
+    if (this.gold < hero.cost) { UI.toast('积分不足'); return false; }
+    this.gold -= hero.cost;
+    const tex = Assets.tex(hero.img);
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(46, 46),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true, color: tex ? 0xffffff : def.color })
+      new THREE.PlaneGeometry(52, 52),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, color: tex ? 0xffffff : hero.color })
     );
     mesh.position.set(slot.x, slot.y, 1);
     this.scene.add(mesh);
     slot.mesh.visible = false;
     const tower = {
-      type: typeId, def, lvl: 0, slot, mesh,
-      cd: 0, ...this._towerStats(def, 0)
+      heroKey, hero, lvl: 0, slot, mesh,
+      cd: 0, ...this._towerStats(hero, 0)
     };
     slot.tower = tower;
     this.towers.push(tower);
@@ -206,24 +203,29 @@ class Game {
     return true;
   }
 
-  _towerStats(def, lvl) {
-    const s = def.levels[lvl];
-    let dmg = s.damage * (1 + (this.passive.damage || 0) + this.tech.damage);
-    let rate = s.rate * (1 + (this.passive.attackSpeed || 0) + this.tech.attackSpeed);
-    let range = s.range * (1 + (this.passive.range || 0));
-    return { damage: dmg, range, rate, slow: s.slow, slowTime: s.slowTime,
-             splash: def.splash ? def.splash * (1 + (this.passive.splash || 0)) : 0,
-             pierce: (def.pierce || 0) + this.tech.pierce };
+  _towerStats(hero, lvl) {
+    const s = hero.levels[lvl];
+    const p = hero.passive;
+    let dmg = s.damage * (1 + (p.damage || 0) + this.tech.damage);
+    let rate = s.rate * (1 + (p.attackSpeed || 0) + this.tech.attackSpeed);
+    let range = s.range * (1 + (p.range || 0) + this.tech.range);
+    return { damage: dmg, range, rate,
+             slow: s.slow ? Math.min(0.8, s.slow * (1 + (p.slow || 0))) : 0,
+             slowTime: s.slowTime,
+             splash: hero.splash ? hero.splash * (1 + (p.splash || 0)) : 0,
+             pierce: (hero.pierce || 0) + this.tech.pierce,
+             bossKiller: !!hero.bossKiller,
+             projColor: hero.projColor };
   }
 
   upgradeTower(slot) {
     const t = slot.tower;
     if (!t || t.lvl >= 2) { UI.toast('已满级'); return; }
-    const cost = t.def.levels[t.lvl + 1].cost;
-    if (this.gold < cost) { UI.toast('金币不足'); return; }
+    const cost = t.hero.levels[t.lvl + 1].cost;
+    if (this.gold < cost) { UI.toast('积分不足'); return; }
     this.gold -= cost;
     t.lvl++;
-    Object.assign(t, this._towerStats(t.def, t.lvl));
+    Object.assign(t, this._towerStats(t.hero, t.lvl));
     t.mesh.scale.setScalar(1 + t.lvl * 0.15);
     // 升级特效
     this._burst(slot.x, slot.y, 0xffe08a, 14);
@@ -234,8 +236,8 @@ class Game {
   sellTower(slot) {
     const t = slot.tower;
     if (!t) return;
-    let refund = Math.floor(t.def.cost * 0.7);
-    for (let i = 1; i <= t.lvl; i++) refund += Math.floor(t.def.levels[i].cost * 0.7);
+    let refund = Math.floor(t.hero.cost * 0.7);
+    for (let i = 1; i <= t.lvl; i++) refund += Math.floor(t.hero.levels[i].cost * 0.7);
     this.gold += refund;
     this.scene.remove(t.mesh);
     this.towers = this.towers.filter(x => x !== t);
@@ -301,91 +303,10 @@ class Game {
     if (def.stealth) mesh.material.opacity = 0.35;
   }
 
-  // ---------- 技能 ----------
-  castSkill() {
-    if (this.skillCd > 0 || this.enemies.length === 0) return;
-    const sk = this.hero.skill;
-    const cdMul = 1 - Math.min(0.6, (this.passive.cooldown || 0) + this.tech.cooldown);
-    this.skillCd = sk.cd * cdMul;
-    AudioMan.play(sk.sfx, 0.8);
-    const cx = CANVAS_W / 2, cy = CANVAS_H / 2;
-    const tex = Assets.tex(sk.effectImg);
-
-    switch (sk.type) {
-      case 'execute': {  // 关羽 武圣斩：最强敌 3 倍
-        const t = this._strongest(); if (!t) break;
-        this._skillSprite(tex, t.x, t.y, 220, 220, sk.color);
-        this._damage(t, t.maxHp * 0.5 + 100);
-        this.shake = 12; break;
-      }
-      case 'roar': {     // 张飞 咆哮：推退+恐惧
-        this._skillSprite(tex, cx, cy, 480, 480, sk.color);
-        this.enemies.forEach(e => { e.dist = Math.max(0, e.dist - sk.knock); e.fearT = sk.fear; });
-        this.shake = 16; break;
-      }
-      case 'dragon': {   // 赵云 龙胆：直线贯穿
-        this._skillSprite(tex, cx, cy, 520, 90, sk.color);
-        this.enemies.forEach(e => this._damage(e, sk.damage, { knock: 30 }));
-        this.shake = 14; break;
-      }
-      case 'snipe': {    // 黄忠 百步穿杨：必杀最强
-        const t = this._strongest(); if (!t) break;
-        this._skillSprite(tex, t.x, t.y, 200, 200, sk.color);
-        this._damage(t, t.hp + 9999);
-        this.shake = 8; break;
-      }
-      case 'starfall': { // 诸葛亮 观星：清屏
-        this._skillSprite(tex, cx, cy, 560, 560, sk.color);
-        for (let i = 0; i < 40; i++) this._particle(Math.random()*CANVAS_W, Math.random()*CANVAS_H, sk.color);
-        this.enemies.forEach(e => this._damage(e, sk.damage));
-        this.shake = 18; break;
-      }
-      case 'soul': {     // 司马懿 噬魂：中毒 DoT
-        this._skillSprite(tex, cx, cy, 420, 420, sk.color);
-        this.enemies.forEach(e => { this._damage(e, sk.damage); e.poisonT = sk.dot; e.poisonDps = sk.damage / sk.dot * 0.8; });
-        this.shake = 10; break;
-      }
-      case 'charm': {    // 貂蝉 离间：自相残杀
-        this._skillSprite(tex, cx, cy, 440, 440, sk.color);
-        this.enemies.forEach(e => { e.charmT = sk.duration; });
-        this.shake = 8; break;
-      }
-      case 'smash': {    // 吕布 方天：最密集点毁灭
-        let best = this.enemies[0], mx = -1;
-        this.enemies.forEach(e => {
-          const near = this.enemies.filter(o => Math.hypot(o.x - e.x, o.y - e.y) < 160).length;
-          if (near > mx) { mx = near; best = e; }
-        });
-        this._skillSprite(tex, best.x, best.y, 380, 380, sk.color);
-        this._burst(best.x, best.y, sk.color, 30);
-        this.enemies.forEach(e => { if (Math.hypot(e.x - best.x, e.y - best.y) < 190) this._damage(e, sk.damage, { knock: 50 }); });
-        this.shake = 22; break;
-      }
-    }
-    this._updateHud();
-  }
-
-  _strongest() {
-    let best = null, mx = -1;
-    this.enemies.forEach(e => { if (!e.dead && e.hp > mx) { mx = e.hp; best = e; } });
-    return best;
-  }
-
-  _skillSprite(tex, x, y, w, h, color) {
-    const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, h),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true, color: tex ? 0xffffff : color, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })
-    );
-    m.position.set(x, y, 5);
-    this.scene.add(m);
-    this.effects.push({ mesh: m, life: 0, max: 0.8, spin: 2.5 });
-  }
-
   // ---------- 主循环 ----------
   update(dt) {
     dt *= this.speed;
     this.time += dt;
-    if (this.skillCd > 0) this.skillCd = Math.max(0, this.skillCd - dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
 
     // 生成敌人
@@ -399,7 +320,6 @@ class Game {
     this._updateTowers(dt);
     this._updateProjectiles(dt);
     this._updateParticles(dt);
-    this._updateEffects(dt);
 
     // 波次结束判定
     if (this.state === 'wave' && this.spawnQueue.length === 0 && this.enemies.length === 0) {
@@ -548,20 +468,20 @@ class Game {
   }
 
   _fire(t, target) {
-    const crit = Math.random() < ((this.passive.crit || 0) + this.tech.crit);
+    const crit = Math.random() < ((t.hero.passive.crit || 0) + this.tech.crit);
     let dmg = t.damage * (crit ? 2 : 1);
-    if (t.def.bossKiller && target.def.boss) dmg *= 2;   // 召唤塔克 Boss
+    if (t.bossKiller && target.def.boss) dmg *= 2;   // 吕布等克 Boss
     const m = new THREE.Mesh(
       new THREE.CircleGeometry(5, 8),
-      new THREE.MeshBasicMaterial({ color: t.def.projColor })
+      new THREE.MeshBasicMaterial({ color: t.projColor })
     );
     m.position.set(t.slot.x, t.slot.y, 4);
     this.scene.add(m);
     this.projectiles.push({
       mesh: m, target, x: t.slot.x, y: t.slot.y,
       speed: 460, dmg, splash: t.splash || 0,
-      slow: t.slow, slowTime: t.slowTime, color: t.def.projColor,
-      poison: !!this.passive.poison   // 司马懿被动：魔法塔附带中毒
+      slow: t.slow, slowTime: t.slowTime, color: t.projColor,
+      poison: !!t.hero.passive.poison   // 司马懿：攻击附毒
     });
     AudioMan.play('whoosh', 0.15);
   }
@@ -615,7 +535,8 @@ class Game {
     setTimeout(() => { if (e.mesh && !e.dead) e.mesh.material.color.setHex(0xffffff); }, 40);
     if (e.hp <= 0) {
       e.dead = true; e._remove = true;
-      this.gold += Math.round(e.def.reward * (1 + this.tech.goldMult));
+      // 击杀积分 = 兵种基础分 × 关卡难度系数 × 科技加成
+      this.gold += Math.round(e.def.score * this.level.diff * (1 + this.tech.goldMult));
       this._burst(e.x, e.y, e.def.color, e.def.boss ? 40 : 12);
       if (e.def.boss) { this.shake = 20; AudioMan.play('skill_ultimate', 0.6); }
       else AudioMan.play('die', 0.25);
@@ -653,17 +574,6 @@ class Game {
       p.mesh.position.x += p.vx * dt;
       p.mesh.position.y += p.vy * dt;
       p.mesh.material.opacity = 1 - p.life / p.max;
-      return true;
-    });
-  }
-
-  _updateEffects(dt) {
-    this.effects = this.effects.filter(f => {
-      f.life += dt;
-      if (f.life >= f.max) { this.scene.remove(f.mesh); return false; }
-      f.mesh.rotation.z += f.spin * dt;
-      f.mesh.material.opacity = 0.95 * (1 - f.life / f.max);
-      f.mesh.scale.setScalar(1 + f.life * 0.8);
       return true;
     });
   }

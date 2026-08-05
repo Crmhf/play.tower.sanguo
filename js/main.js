@@ -1,6 +1,6 @@
 // 主入口：场景管理（菜单 → 选关 → 战斗）
 const App = {
-  hero: null, game: null, raf: null, last: 0,
+  game: null, raf: null, last: 0,
   unlocked: parseInt(localStorage.getItem('sg_unlocked') || '1'),
 
   start() {
@@ -16,7 +16,7 @@ const App = {
   },
 
   showScreen(id) {
-    ['menu', 'heroes', 'levels', 'battle'].forEach(s => {
+    ['menu', 'levels', 'battle'].forEach(s => {
       document.getElementById('screen-' + s).classList.toggle('active', s === id);
     });
   },
@@ -24,32 +24,21 @@ const App = {
   _bindMenu() {
     document.getElementById('btn-start').onclick = () => {
       AudioMan.init(); AudioMan.playBgm('menu.mp3');
-      this._renderHeroes(); this.showScreen('heroes');
+      this._renderLevels(); this.showScreen('levels');
     };
     document.getElementById('btn-mute').onclick = (e) => {
       const m = AudioMan.toggleMute();
       e.target.textContent = m ? '🔇' : '🔊';
     };
-  },
-
-  _renderHeroes() {
-    const box = document.getElementById('hero-list');
-    box.innerHTML = '';
-    Object.values(HEROES).forEach(h => {
-      const c = document.createElement('div');
-      c.className = 'hero-card';
-      c.innerHTML = `
-        <img src="${h.img}" onerror="this.src=''">
-        <div class="hc-name" style="color:${h.color}">${h.name} · ${h.title}</div>
-        <div class="hc-desc">${h.desc}</div>
-        <div class="hc-skill">【${h.skill.name}】${h.skill.desc}</div>
-        <div class="hc-passive">被动：${h.passive.text}</div>
-        <button class="hc-btn">选择出战</button>`;
-      c.querySelector('.hc-btn').onclick = () => {
-        this.hero = h.id; this._renderLevels(); this.showScreen('levels');
-      };
-      box.appendChild(c);
+    // 图鉴说明
+    ['btn-help', 'btn-help2', 'btn-help3'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.onclick = () => UI.showHelp('hero');
     });
+    document.getElementById('help-close').onclick = () => UI.hideHelp();
+    document.getElementById('help-modal').onclick = (e) => {
+      if (e.target.id === 'help-modal') UI.hideHelp();
+    };
   },
 
   _renderLevels() {
@@ -64,8 +53,6 @@ const App = {
       if (!locked) b.onclick = () => this.startBattle(i);
       box.appendChild(b);
     });
-    document.getElementById('levels-hero').textContent =
-      '出战武将：' + HEROES[this.hero].name;
   },
 
   startBattle(levelIdx) {
@@ -74,16 +61,14 @@ const App = {
     const container = document.getElementById('stage');
     container.innerHTML = '';
     if (this.game) this.game.destroy();
-    this.game = new Game(container, this.hero, levelIdx);
+    this.game = new Game(container, levelIdx);
     UI.setWaveBtn(true);
     UI.hidePanels();
+    UI.hideHelp();
     document.getElementById('result').classList.remove('show');
-    document.getElementById('skill-btn').querySelector('.sk-icon').style.background = this.game.hero.color;
-    document.getElementById('skill-name').textContent = this.game.hero.skill.name;
 
     // 绑定战斗 UI
     document.getElementById('wave-btn').onclick = () => this.game.startWave();
-    document.getElementById('skill-btn').onclick = () => this.game.castSkill();
     document.getElementById('speed-btn').onclick = (e) => {
       this.game.speed = this.game.speed === 1 ? 2 : 1;
       e.target.textContent = '×' + this.game.speed;
@@ -95,8 +80,8 @@ const App = {
 
     // 键盘快捷键
     window.onkeydown = (e) => {
-      if (e.code === 'Space') { e.preventDefault(); this.game.castSkill(); }
       if (e.code === 'Enter') this.game.startWave();
+      if (e.code === 'Escape') UI.hideHelp();
     };
 
     this.last = performance.now();

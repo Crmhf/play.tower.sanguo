@@ -18,21 +18,16 @@
       <h1 class="game-title">三国塔防</h1>
       <p class="game-sub">TOWER OF THREE KINGDOMS</p>
       <button id="btn-start" class="big-btn">进入乱世</button>
-      <p class="menu-tip">50 关史诗战役 · 四名将专属技能 · 可建造升级防御塔</p>
+      <button id="btn-help" class="help-btn">📖 武将图鉴</button>
+      <p class="menu-tip">50 关史诗战役 · 8 名将积分召唤上阵 · 击杀怪物赚取积分升级</p>
     </div>
     <button id="btn-mute" class="mute-btn">🔊</button>
-  </section>
-
-  <!-- 选将 -->
-  <section id="screen-heroes" class="screen">
-    <h2 class="screen-title">选择出战武将</h2>
-    <div id="hero-list"></div>
   </section>
 
   <!-- 选关 -->
   <section id="screen-levels" class="screen">
     <h2 class="screen-title">选择关卡</h2>
-    <p id="levels-hero" class="levels-hero"></p>
+    <button id="btn-help2" class="help-btn">📖 武将图鉴</button>
     <div id="level-grid"></div>
   </section>
 
@@ -40,10 +35,11 @@
   <section id="screen-battle" class="screen">
     <div id="hud">
       <span class="hud-item" id="hud-level">第 1 关</span>
-      <span class="hud-item">💰 <b id="hud-gold">0</b></span>
+      <span class="hud-item">⚡ <b id="hud-gold">0</b></span>
       <span class="hud-item">❤️ <b id="hud-lives">0</b></span>
       <span class="hud-item">🌊 <b id="hud-wave">0/0</b></span>
       <span class="hud-spacer"></span>
+      <button id="btn-help3" class="hud-btn">📖 图鉴</button>
       <button id="speed-btn" class="hud-btn">×1</button>
       <button id="quit-btn" class="hud-btn">退出</button>
     </div>
@@ -51,9 +47,6 @@
     <div id="stage-wrap">
       <div id="stage"></div>
       <div id="toast"></div>
-
-      <div id="skill-btn"><div class="sk-icon"></div><div class="cd-text"></div></div>
-      <div id="skill-name"></div>
 
       <div id="build-wheel"></div>
       <div id="upgrade-panel"></div>
@@ -77,15 +70,29 @@
 
 </div>
 
-<script src="js/heroes.js?v=2"></script>
-<script src="js/towers.js?v=2"></script>
-<script src="js/enemies.js?v=2"></script>
-<script src="js/levels.js?v=2"></script>
-<script src="js/tech.js?v=2"></script>
-<script src="js/assets.js?v=2"></script>
-<script src="js/audio.js?v=2"></script>
-<script src="js/ui.js?v=2"></script>
-<script src="js/game.js?v=2"></script>
-<script src="js/main.js?v=2"></script>
+<!-- 图鉴说明弹窗 -->
+<div id="help-modal">
+  <div class="help-box">
+    <div class="help-head">
+      <div class="help-tabs">
+        <button class="help-tab active" data-tab="hero">⚔️ 武将图鉴</button>
+        <button class="help-tab" data-tab="enemy">👹 怪物图鉴</button>
+      </div>
+      <button id="help-close">✕</button>
+    </div>
+    <div class="help-tip">击杀怪物获得积分（积分 = 怪物分值 × 关卡难度），用积分召唤武将上阵、并为其升星强化。</div>
+    <div id="help-grid"></div>
+  </div>
+</div>
+
+<script src="js/heroes.js?v=3"></script>
+<script src="js/enemies.js?v=3"></script>
+<script src="js/levels.js?v=3"></script>
+<script src="js/tech.js?v=3"></script>
+<script src="js/assets.js?v=3"></script>
+<script src="js/audio.js?v=3"></script>
+<script src="js/ui.js?v=3"></script>
+<script src="js/game.js?v=3"></script>
+<script src="js/main.js?v=3"></script>
 </body>
 </html>
