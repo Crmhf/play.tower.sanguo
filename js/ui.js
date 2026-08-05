@@ -35,6 +35,25 @@ const UI = {
     this._tt = setTimeout(() => t.classList.remove('show'), 1600);
   },
 
+  // 基地受击红屏脉冲
+  hurtFlash() {
+    const f = document.getElementById('hurt-flash');
+    if (!f) return;
+    f.style.transition = 'none'; f.style.opacity = '0.85';
+    requestAnimationFrame(() => { f.style.transition = 'opacity .5s'; f.style.opacity = '0'; });
+  },
+
+  // Boss 出场红色横幅
+  bossBanner(name) {
+    const wrap = document.getElementById('stage-wrap');
+    if (!wrap) return;
+    let b = wrap.querySelector('.boss-banner');
+    if (!b) { b = document.createElement('div'); b.className = 'boss-banner'; wrap.appendChild(b); }
+    b.textContent = '⚔ ' + name + ' ⚔';
+    b.classList.remove('show'); void b.offsetWidth;   // 重启动画
+    b.classList.add('show');
+  },
+
   hidePanels() {
     document.getElementById('build-wheel').classList.remove('show');
     document.getElementById('upgrade-panel').classList.remove('show');

@@ -44,15 +44,88 @@ const App = {
   _renderLevels() {
     const box = document.getElementById('level-grid');
     box.innerHTML = '';
-    LEVELS.forEach((lv, i) => {
-      const b = document.createElement('button');
-      const locked = (i + 1) > this.unlocked;
-      b.className = 'level-cell' + (locked ? ' locked' : '') + (lv.boss ? ' boss' : '');
-      b.textContent = locked ? '🔒' : (lv.boss ? '👹' + lv.level : lv.level);
-      b.title = lv.name;
-      if (!locked) b.onclick = () => this.startBattle(i);
-      box.appendChild(b);
-    });
+    // 战役进度条（5 章分段，点刻度可跳到对应章节块）
+    this._renderCampaignBar();
+    const TERRAIN = { plain:'平原', forest:'森林', river:'河谷', volcano:'火山', snow:'雪原', boss:'决战' };
+    const CHAP_COLOR = ['#c9a227','#4a9a4a','#4a8ad0','#d06a3a','#aac8e8'];
+    // 按 10 关一章拆成 5 个章节块
+    for (let chapIdx = 0; chapIdx < 5; chapIdx++) {
+      const chap = CHAPTERS[chapIdx];
+      const block = document.createElement('div');
+      block.className = 'chapter-block';
+      block.dataset.chap = chapIdx;
+      block.id = 'chapter-' + chapIdx;
+      const head = document.createElement('div');
+      head.className = 'chapter-head';
+      head.innerHTML = `<span class="chapter-name">${chap.name}</span>
+        <span class="chapter-terrain">${TERRAIN[chap.bg] || ''}</span>
+        <span class="chapter-reward">通关奖励 · ${chap.reward}</span>`;
+      block.appendChild(head);
+      const cells = document.createElement('div');
+      cells.className = 'chapter-cells';
+      for (let k = 0; k < 10; k++) {
+        const i = chapIdx * 10 + k;
+        const lv = LEVELS[i];
+        if (!lv) continue;
+        const locked = (i + 1) > this.unlocked;
+        const cleared = (i + 1) < this.unlocked;
+        const wrap = document.createElement('div');
+        wrap.className = 'cell-wrap';
+        const b = document.createElement('button');
+        b.className = 'level-cell' + (locked ? ' locked' : '') + (lv.boss ? ' boss' : '');
+        b.textContent = locked ? '🔒' : (lv.boss ? '👹' : lv.level);
+        if (cleared) {
+          const s = document.createElement('span');
+          s.className = 'stars';
+          s.textContent = '★★★';
+          b.appendChild(s);
+        }
+        // 悬停信息卡：关名 / 地形 / 血量倍率 / Boss·奖励
+        if (!locked) {
+          const tip = document.createElement('div');
+          tip.className = 'cell-tip';
+          tip.innerHTML = `<div class="ct-name">${lv.name}</div>
+            <div class="ct-line">地形 ${TERRAIN[lv.bg] || ''} · 血量×${lv.diff}</div>
+            ${lv.boss ? '<div class="ct-boss">⚔ 章节 BOSS 关</div>' : ''}`;
+          wrap.appendChild(tip);
+          b.onclick = () => this.startBattle(i);
+        }
+        wrap.appendChild(b);
+        cells.appendChild(wrap);
+      }
+      block.appendChild(cells);
+      box.appendChild(block);
+    }
+  },
+
+  // 顶部战役进度条：已解锁进度 + 5 章分段刻度
+  _renderCampaignBar() {
+    const bar = document.getElementById('campaign-bar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    const label = document.createElement('span');
+    label.className = 'campaign-label';
+    label.textContent = `战役进度 ${Math.min(this.unlocked, 50)}/50`;
+    bar.appendChild(label);
+    const CHAP_COLOR = ['#c9a227','#4a9a4a','#4a8ad0','#d06a3a','#aac8e8'];
+    for (let c = 0; c < 5; c++) {
+      const seg = document.createElement('div');
+      seg.className = 'campaign-seg';
+      seg.title = CHAPTERS[c].name;
+      const fill = document.createElement('div');
+      fill.className = 'fill';
+      // 本章已通关比例 0..1
+      const chapStart = c * 10 + 1;                 // 本章第一关编号
+      const cleared = Math.max(0, Math.min(10, this.unlocked - chapStart));
+      fill.style.background = CHAP_COLOR[c];
+      fill.style.transform = `scaleX(${cleared / 10})`;
+      seg.appendChild(fill);
+      seg.onclick = () => {
+        const t = document.getElementById('chapter-' + c);
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      bar.appendChild(seg);
+    }
   },
 
   startBattle(levelIdx) {
@@ -92,8 +165,10 @@ const App = {
       if (this.game && (this.game.state === 'build' || this.game.state === 'wave')) {
         this.game.update(dt);
         UI.updateHud(this.game);
+        if (!document.hidden) this.game.render();   // 后台标签页只推进逻辑、不空渲染
       } else if (this.game) {
-        this.game.update(0); // 仍渲染结算画面
+        this.game.update(0); // 仍推进结算画面逻辑
+        if (!document.hidden) this.game.render();
       }
     };
     // requestAnimationFrame 驱动（流畅），setInterval 兜底（标签页后台/被节流时仍推进）

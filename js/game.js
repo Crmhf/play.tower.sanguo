@@ -28,10 +28,14 @@ class Game {
     this.shake = 0;
     this.time = 0;
     this.speed = 1;
+    this._floaters = [];              // DOM 飘字（随 dt 推进，后台不堆积）
 
     this._setupThree();
+    this._initParticles();            // 单一 THREE.Points 承载全部粒子（1 次 draw call）
     this._buildPath();
     this._buildSlots();
+    this._buildRangeRing();
+    this._buildDecor();
     this._bindInput();
     this._updateHud();
   }
@@ -69,6 +73,193 @@ class Game {
     this.scene.add(veil);
   }
 
+  // ---------- 统一粒子系统：单一 THREE.Points 承载全部粒子（整场 1 次 draw call） ----------
+  // 自定义 ShaderMaterial 以真正读取每粒子 aAlpha/aSize（PointsMaterial 不支持逐粒子属性）。
+  // additive 混合下黑色即透明，故 aColor 直接随生命衰减到黑即淡出；aAlpha 恒 1 占位。
+  _initParticles() {
+    const MAX = this.MAX_PARTICLES = 600;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(MAX * 3);
+    const col = new Float32Array(MAX * 3);
+    const aSize = new Float32Array(MAX);
+    const aAlpha = new Float32Array(MAX);
+    // 初始全部移到屏外并隐藏
+    for (let i = 0; i < MAX; i++) { pos[i * 3 + 1] = -9999; aAlpha[i] = 0; }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(aSize, 1));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(aAlpha, 1));
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute float aSize; attribute float aAlpha; attribute vec3 aColor;
+        varying float vA; varying vec3 vC;
+        void main(){ vA=aAlpha; vC=aColor; gl_PointSize=aSize;
+          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader: `
+        varying float vA; varying vec3 vC;
+        void main(){ vec2 d=gl_PointCoord-vec2(0.5); float a=smoothstep(0.5,0.1,length(d));
+          gl_FragColor=vec4(vC, a*vA); }`
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    this.points.renderOrder = 60;
+    this.scene.add(this.points);
+    this._pMax = MAX;
+    this._pCursor = 0;                 // 环形写入游标
+    this._pData = new Array(MAX);      // 平行数组：{x,y,vx,vy,life,max,r,g,b,size,grow}
+    for (let i = 0; i < MAX; i++) this._pData[i] = { life: -1 };
+  }
+
+  // 写入一个粒子（环形覆盖最旧槽）。color 为 0xRRGGBB。
+  _emit(x, y, color, opt = {}) {
+    const i = this._pCursor; this._pCursor = (this._pCursor + 1) % this._pMax;
+    const d = this._pData[i];
+    d.x = x; d.y = y;
+    d.vx = opt.vx !== undefined ? opt.vx : (Math.random() - 0.5) * 80;
+    d.vy = opt.vy !== undefined ? opt.vy : (Math.random() - 0.5) * 80;
+    d.life = 0; d.max = opt.max || 0.45;
+    d.r = ((color >> 16) & 255) / 255; d.g = ((color >> 8) & 255) / 255; d.b = (color & 255) / 255;
+    d.size = opt.size || 7; d.grow = opt.grow || 0;   // grow>0：命中闪光，半径随生命膨胀
+    const posAttr = this.points.geometry.attributes.position;
+    posAttr.array[i * 3] = x; posAttr.array[i * 3 + 1] = y; posAttr.array[i * 3 + 2] = 6;
+    this.points.geometry.attributes.aAlpha.array[i] = 1;
+  }
+
+  _particle(x, y, color, scale = 1, max = 0.4) {
+    this._emit(x, y, color, { size: 7 * scale, max });
+  }
+
+  _burst(x, y, color, n) {
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 150;
+      this._emit(x, y, color, { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, size: 5 + Math.random() * 6, max: 0.5 + Math.random() * 0.3 });
+    }
+  }
+
+  // 命中闪光：一颗快速膨胀并淡出的亮点
+  _flash(x, y, color, r) {
+    this._emit(x, y, color, { vx: 0, vy: 0, size: r * 2, max: 0.16, grow: r });
+  }
+
+  _updateParticles(dt) {
+    const posAttr = this.points.geometry.attributes.position;
+    const colAttr = this.points.geometry.attributes.aColor;
+    const sizeAttr = this.points.geometry.attributes.aSize;
+    const alphaAttr = this.points.geometry.attributes.aAlpha;
+    const pos = posAttr.array, col = colAttr.array;
+    for (let i = 0; i < this._pMax; i++) {
+      const d = this._pData[i];
+      if (d.life < 0) continue;                 // 空槽
+      d.life += dt;
+      if (d.life >= d.max) { d.life = -1; alphaAttr.array[i] = 0; pos[i * 3 + 1] = -9999; continue; }
+      const k = d.life / d.max;                  // 0→1
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      pos[i * 3] = d.x; pos[i * 3 + 1] = d.y;
+      const fade = 1 - k;                        // additive：颜色衰减到黑 = 透明
+      col[i * 3] = d.r * fade; col[i * 3 + 1] = d.g * fade; col[i * 3 + 2] = d.b * fade;
+      sizeAttr.array[i] = d.grow ? d.grow * (0.5 + k * 1.2) * 2 : d.size;
+    }
+    posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+    sizeAttr.needsUpdate = true; alphaAttr.needsUpdate = true;
+  }
+
+  // ---------- 射程圈：hover/选中塔时显示的呼吸虚线圈 ----------
+  _buildRangeRing() {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(1, 1.05, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide })
+    );
+    const fill = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.07, depthWrite: false })
+    );
+    g.add(ring); g.add(fill);
+    g.position.z = 2.5; g.visible = false;
+    g.renderOrder = 25;
+    this.scene.add(g);
+    this.rangeRing = g; this._ringMat = ring.material; this._rangeTower = null;
+  }
+  _showRange(tower) {
+    this._rangeTower = tower;
+    const c = tower.hero.projColor || 0xffd98a;
+    this._ringMat.color.setHex(c);
+    this.rangeRing.position.set(tower.slot.x, tower.slot.y, 2.5);
+    this.rangeRing.scale.set(tower.range, tower.range, 1);
+    this.rangeRing.visible = true;
+  }
+  _hideRange() { this.rangeRing.visible = false; this._rangeTower = null; }
+
+  // ---------- 战场装饰：基地旁与路径拐角的程序化小旗（正弦摆动） ----------
+  _buildDecor() {
+    this.decors = [];
+    const spots = [this.basePos];
+    for (let i = 1; i < this.path.length - 1; i++) spots.push(this.path[i]);
+    const cols = [0xc0392b, 0xd8a93a, 0x3a7bd5];
+    spots.slice(0, 6).forEach((s, idx) => {
+      const flag = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 11),
+        new THREE.MeshBasicMaterial({ color: cols[idx % cols.length], transparent: true, opacity: 0.9, depthWrite: false })
+      );
+      flag.position.set(s.x + 20, s.y - 26, -3);
+      flag.renderOrder = 5;
+      // 顶点锚在左边缘，便于绕杆摆动
+      flag.geometry.translate(8, 0, 0);
+      this.scene.add(flag);
+      // 旗杆
+      const pole = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 26),
+        new THREE.MeshBasicMaterial({ color: 0x5a4a2a, transparent: true, opacity: 0.9, depthWrite: false })
+      );
+      pole.position.set(s.x + 20, s.y - 13, -3.1);
+      pole.renderOrder = 4;
+      this.scene.add(pole);
+      this.decors.push({ mesh: flag, phase: Math.random() * 6.28 });
+    });
+  }
+
+  // 环境装饰每帧更新：旗帜摆动 + 槽位/基地呼吸 + 射程圈脉冲
+  _updateAmbient(dt) {
+    // 旗帜
+    for (const d of this.decors) d.mesh.rotation.z = Math.sin(this.time * 2 + d.phase) * 0.28;
+    // 路径行军方向箭头：纹理 offset 递减 → 朝行进方向流动
+    for (const t of this._pathArrows) t.offset.x -= dt * 0.5;
+    // 空槽呼吸（可建提示）
+    for (const s of this.slots) {
+      if (s.tower) continue;
+      const base = (s === this.hoverSlot);
+      s.mesh.material.opacity = base ? 0.5 : 0.16 + 0.07 * Math.sin(this.time * 2.5 + s.x * 0.05);
+      const sc = base ? 1.2 : 1;
+      if (s.mesh.scale.x !== sc) s.mesh.scale.setScalar(sc);
+    }
+    // 基地光环脉动 + 漏怪变红预警
+    if (this.baseHalo) {
+      const danger = this.enemies.some(e => !e.dead && e.seg >= this.path.length - 2);
+      const pulse = 0.3 + 0.18 * Math.sin(this.time * (danger ? 8 : 2.5));
+      this.baseHalo.material.opacity = pulse;
+      this.baseHalo.material.color.setHex(danger ? 0xff4040 : 0x3aa0ff);
+      const hs = 1 + 0.08 * Math.sin(this.time * (danger ? 8 : 2.5));
+      this.baseHalo.scale.set(hs, hs, 1);
+    }
+    // 射程圈呼吸 + 卖出惰性隐藏
+    if (this.rangeRing.visible) {
+      if (this._rangeTower && !this._rangeTower.slot.tower) this._hideRange();
+      else this._ringMat.opacity = 0.5 + 0.22 * Math.sin(this.time * 4);
+    }
+  }
+
+  // DOM 伤害飘字随 dt 推进（后台标签页不会堆积 setTimeout 节点）
+  _updateFloaters(dt) {
+    this._floaters = this._floaters.filter(f => {
+      f.life += dt;
+      if (f.life >= f.max) { f.el.remove(); return false; }
+      f.el.style.transform = `translate(-50%,-50%) translateY(${-f.life * 46}px)`;
+      f.el.style.opacity = 1 - f.life / f.max;
+      return true;
+    });
+  }
+
   // 路径折线 → 渲染 + 供敌人行进
   _buildPath() {
     this.path = this.level.path.map(p => ({ x: p.x, y: p.y })); // 世界坐标 = 画布坐标（相机 top=h）
@@ -78,6 +269,7 @@ class Game {
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x8a6b3a, linewidth: 3 }));
     this.scene.add(line);
     // 路径宽带（视觉）
+    this._pathArrows = [];
     for (let i = 0; i < this.path.length - 1; i++) {
       const a = this.path[i], b = this.path[i + 1];
       const len = Math.hypot(b.x - a.x, b.y - a.y);
@@ -88,6 +280,19 @@ class Game {
       seg.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, -6);
       seg.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
       this.scene.add(seg);
+      // 行军方向流动箭头（纹理 offset 滚动，恒朝行进方向）
+      const atex = new THREE.CanvasTexture(this._makeArrowCanvas());
+      atex.wrapS = THREE.RepeatWrapping;
+      atex.repeat.x = Math.max(1, Math.round(len / 46));
+      const arrow = new THREE.Mesh(
+        new THREE.PlaneGeometry(len, 30),
+        new THREE.MeshBasicMaterial({ map: atex, transparent: true, opacity: 0.28, depthWrite: false })
+      );
+      arrow.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, -5.5);
+      arrow.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
+      arrow.renderOrder = 3;
+      this.scene.add(arrow);
+      this._pathArrows.push(atex);
     }
     // 基地（终点）
     const base = new THREE.Mesh(
@@ -97,7 +302,28 @@ class Game {
     const end = this.path[this.path.length - 1];
     base.position.set(end.x, end.y, -4);
     this.scene.add(base);
+    this.baseMesh = base;
+    // 基地光环（脉动 + 漏怪变红预警）
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(30, 40, 32),
+      new THREE.MeshBasicMaterial({ color: 0x3aa0ff, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide })
+    );
+    halo.position.set(end.x, end.y, -3.5);
+    halo.renderOrder = 4;
+    this.scene.add(halo);
+    this.baseHalo = halo;
     this.basePos = end;
+  }
+
+  // 程序化生成「行军方向」箭头纹理（朝 +x，即段局部行进方向）
+  _makeArrowCanvas() {
+    const c = document.createElement('canvas'); c.width = 46; c.height = 30;
+    const g = c.getContext('2d');
+    g.strokeStyle = '#e8c86a'; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(8, 22); g.lineTo(30, 15); g.lineTo(8, 8);   // › 形箭头
+    g.stroke();
+    return c;
   }
 
   // 可建塔的空地槽位：沿路径两侧自动布置
@@ -167,17 +393,20 @@ class Game {
   _onMove(e) {
     const p = this._toWorld(e);
     this.hoverSlot = this.slots.find(s => Math.hypot(s.x - p.x, s.y - p.y) < 22) || null;
-    this.slots.forEach(s => { if (!s.tower) s.mesh.material.opacity = (s === this.hoverSlot) ? 0.4 : 0.18; });
+    // hover 到已建塔：显示射程圈
+    if (this.hoverSlot && this.hoverSlot.tower) this._showRange(this.hoverSlot.tower);
+    else if (this._rangeTower && !document.getElementById('upgrade-panel').classList.contains('show')) this._hideRange();
   }
 
   _onClick(e) {
     const p = this._toWorld(e);
     const slot = this.slots.find(s => Math.hypot(s.x - p.x, s.y - p.y) < 22);
     if (slot) {
-      if (slot.tower) UI.showUpgradePanel(this, slot);
+      if (slot.tower) { UI.showUpgradePanel(this, slot); this._showRange(slot.tower); }
       else UI.showBuildWheel(this, slot, e.clientX, e.clientY);
     } else {
       UI.hidePanels();
+      this._hideRange();
     }
   }
 
@@ -200,6 +429,8 @@ class Game {
       cd: 0, ...this._towerStats(hero, 0)
     };
     slot.tower = tower;
+    tower.animSeed = Math.random() * 6.28;
+    tower.attackT = 0;
     this.towers.push(tower);
     this._recalcSynergy();
     AudioMan.play('attack_sword', 0.3);
@@ -283,6 +514,16 @@ class Game {
     });
     UI.setWaveBtn(false);
     UI.toast('第 ' + (this.waveIdx + 1) + ' 波来袭！');
+    // 出兵号角：出兵口错相位金色冲击环
+    const s = this.path[0];
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => this._ringFX(s.x, s.y, 0xffd98a), i * 130);
+    }
+  }
+
+  // 冲击环：一片快速放大淡出的圆（用 Points 闪光近似，叠两道大小错开形成环感）
+  _ringFX(x, y, color) {
+    this._emit(x, y, color, { vx: 0, vy: 0, size: 20, max: 0.5, grow: 34 });
   }
 
   _spawn(typeId) {
@@ -319,13 +560,22 @@ class Game {
       wob: Math.random() * Math.PI * 2, dead: false
     });
     if (def.stealth) mesh.material.opacity = 0.35;
+    // Boss 登场仪式：横幅 + 中幅震 + 出场闪光
+    if (def.boss) {
+      this.shake = Math.max(this.shake, 10);
+      AudioMan.play('skill_ultimate', 0.5);
+      this._flash(start.x, start.y, 0xff4040, 36);
+      UI.bossBanner(def.name);
+    }
   }
 
   // ---------- 主循环 ----------
   update(dt) {
     dt *= this.speed;
     this.time += dt;
-    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
+    // 屏幕震动：指数平滑衰减，避免长时间乱晃
+    this.shake *= Math.max(0, 1 - dt * 6);
+    if (this.shake < 0.05) this.shake = 0;
 
     // 生成敌人
     if (this.state === 'wave') {
@@ -338,6 +588,8 @@ class Game {
     this._updateTowers(dt);
     this._updateProjectiles(dt);
     this._updateParticles(dt);
+    this._updateFloaters(dt);
+    this._updateAmbient(dt);
 
     // 波次结束判定
     if (this.state === 'wave' && this.spawnQueue.length === 0 && this.enemies.length === 0) {
@@ -352,7 +604,9 @@ class Game {
       }
       this._updateHud();
     }
+  }
 
+  render() {
     // 相机震动
     const sx = (Math.random() - 0.5) * this.shake, sy = (Math.random() - 0.5) * this.shake;
     this.camera.position.set(sx, sy, 100);
@@ -362,6 +616,8 @@ class Game {
   _updateEnemies(dt) {
     for (const e of this.enemies) {
       if (e.dead) continue;
+      // 受击闪白恢复（dt 计时器）
+      if (e._flashT > 0) { e._flashT -= dt; if (e._flashT <= 0 && e._origColor !== undefined) e.mesh.material.color.setHex(e._origColor); }
       // 持续伤害：灼烧 + 中毒
       if (e.burnT > 0) { e.burnT -= dt; this._damage(e, e.burnDps * dt, { silent: true }); if (Math.random() < dt * 6) this._particle(e.x, e.y, 0xff7030); }
       if (e.poisonT > 0) { e.poisonT -= dt; this._damage(e, e.poisonDps * dt, { silent: true }); if (Math.random() < dt * 4) this._particle(e.x, e.y, 0xa04ad8); }
@@ -456,16 +712,26 @@ class Game {
     e._remove = true; e.dead = true;
     this.lives -= e.def.boss ? 5 : 1;
     this._burst(e.x, e.y, 0xff4040, 10);
-    this.shake = Math.max(this.shake, 8);
+    this.shake = Math.max(this.shake, 10);
     AudioMan.play('hit', 0.5);
+    UI.hurtFlash();
     this._updateHud();
     if (this.lives <= 0) this._lose();
   }
 
   _updateTowers(dt) {
     for (const t of this.towers) {
+      // 待机浮动 + 开火冲量（务必放在冷却 continue 之前，否则冷却中的塔会冻结）
+      const idleY = Math.sin(this.time * 2 + t.animSeed) * 1.5;
+      if (t.attackT > 0) {
+        t.attackT -= dt;
+        const k = 1 + Math.max(0, t.attackT) * 0.9;
+        t.mesh.scale.setScalar((1 + t.lvl * 0.15) * k);
+      } else {
+        t.mesh.scale.setScalar(1 + t.lvl * 0.15);
+      }
       t.cd -= dt;
-      if (t.cd > 0) continue;
+      if (t.cd > 0) { t.mesh.position.y = t.slot.y + idleY; continue; }
       // 找射程内最靠前的敌人
       let target = null, bestProg = -1;
       for (const e of this.enemies) {
@@ -478,9 +744,13 @@ class Game {
       }
       if (target) {
         t.cd = 1 / t.rate;
+        t.attackT = 0.18;               // 开火后坐冲量
         this._fire(t, target);
         // 炮口朝向
         t.mesh.rotation.z = Math.atan2(target.y - t.slot.y, target.x - t.slot.x);
+        t.mesh.position.y = t.slot.y + idleY;
+      } else {
+        t.mesh.position.y = t.slot.y + idleY;
       }
     }
   }
@@ -497,7 +767,7 @@ class Game {
     this.scene.add(m);
     this.projectiles.push({
       mesh: m, target, x: t.slot.x, y: t.slot.y,
-      speed: 460, dmg, splash: t.splash || 0,
+      speed: 460, dmg, splash: t.splash || 0, crit,
       slow: t.slow, slowTime: t.slowTime, color: t.projColor,
       poison: !!t.hero.passive.poison   // 司马懿：攻击附毒
     });
@@ -512,15 +782,16 @@ class Game {
       const step = p.speed * dt;
       if (d <= step + 4) {
         // 命中
+        this._flash(p.target.x, p.target.y, p.color, 9);
         if (p.splash > 0) {
           this._burst(p.target.x, p.target.y, p.color, 12);
           AudioMan.play('explosion', 0.3);
           this.enemies.forEach(e => {
-            if (!e.dead && Math.hypot(e.x - p.target.x, e.y - p.target.y) < p.splash) this._damage(e, p.dmg);
+            if (!e.dead && Math.hypot(e.x - p.target.x, e.y - p.target.y) < p.splash) this._damage(e, p.dmg, { crit: p.crit });
           });
-          this.shake = Math.max(this.shake, 3);
+          this.shake = Math.max(this.shake, 4);
         } else {
-          this._damage(p.target, p.dmg);
+          this._damage(p.target, p.dmg, { crit: p.crit });
           this._particle(p.target.x, p.target.y, p.color);
           if (p.slow) this._slow(p.target, p.slow, p.slowTime);
           if (p.poison && !p.target.dead) { p.target.poisonT = 3; p.target.poisonDps = p.dmg * 0.3; }
@@ -530,6 +801,8 @@ class Game {
       } else {
         p.x += dx / d * step; p.y += dy / d * step;
         p.mesh.position.set(p.x, p.y, 4);
+        // 弹道拖尾（弹越快残影越明显）
+        if (Math.random() < dt * 28) this._particle(p.x, p.y, p.color, 0.55, 0.22);
       }
     }
     this.projectiles = this.projectiles.filter(p => {
@@ -548,52 +821,49 @@ class Game {
     const real = Math.max(1, amount - (e.armor || 0));
     e.hp -= real;
     if (opt.knock) { e.dist = Math.max(0, e.dist - opt.knock); }
-    // 受击闪白
-    e.mesh.material.color.setHex(0xffffff);
-    setTimeout(() => { if (e.mesh && !e.dead) e.mesh.material.color.setHex(0xffffff); }, 40);
+    // 受击闪白：用 dt 计时器（不用 setTimeout，规避后台节流/状态错乱），恢复原色
+    if (!opt.silent) {
+      e._origColor = e.mesh.material.map ? 0xffffff : e.def.color;
+      e.mesh.material.color.setHex(0xffffff);
+      e._flashT = 0.06;
+      // 暴击飘字（金色大字）
+      if (opt.crit) this._spawnFloater(e.x, e.y - e.def.size / 2 - 8, Math.round(real), true);
+    }
     if (e.hp <= 0) {
       e.dead = true; e._remove = true;
       // 击杀积分 = 兵种基础分 × 关卡难度系数 × 科技加成
       this.gold += Math.round(e.def.score * this.level.diff * (1 + this.tech.goldMult));
-      this._burst(e.x, e.y, e.def.color, e.def.boss ? 40 : 12);
-      if (e.def.boss) { this.shake = 20; AudioMan.play('skill_ultimate', 0.6); }
-      else AudioMan.play('die', 0.25);
+      // 击杀反馈按体型/重要性分级
+      const n = e.def.boss ? 40 : (e.def.size >= 44 ? 22 : 16);
+      this._burst(e.x, e.y, e.def.color, n);
+      if (e.def.boss) {
+        this._flash(e.x, e.y, 0xffffff, 44);
+        this._burst(e.x, e.y, 0xffe08a, 22);          // 金屑
+        this.shake = Math.max(this.shake, 18);
+        AudioMan.play('skill_ultimate', 0.6);
+      } else {
+        this.shake = Math.max(this.shake, 1.5);
+        AudioMan.play('die', 0.25);
+      }
       this._updateHud();
     }
   }
 
-  _particle(x, y, color) {
-    const m = new THREE.Mesh(
-      new THREE.CircleGeometry(3, 6),
-      new THREE.MeshBasicMaterial({ color, transparent: true })
-    );
-    m.position.set(x, y, 6);
-    this.scene.add(m);
-    this.particles.push({ mesh: m, life: 0, max: 0.4, vx: (Math.random() - 0.5) * 80, vy: (Math.random() - 0.5) * 80 });
-  }
-
-  _burst(x, y, color, n) {
-    for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(
-        new THREE.CircleGeometry(2 + Math.random() * 3, 6),
-        new THREE.MeshBasicMaterial({ color, transparent: true })
-      );
-      m.position.set(x, y, 6);
-      this.scene.add(m);
-      const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 140;
-      this.particles.push({ mesh: m, life: 0, max: 0.5 + Math.random() * 0.3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp });
-    }
-  }
-
-  _updateParticles(dt) {
-    this.particles = this.particles.filter(p => {
-      p.life += dt;
-      if (p.life >= p.max) { this.scene.remove(p.mesh); return false; }
-      p.mesh.position.x += p.vx * dt;
-      p.mesh.position.y += p.vy * dt;
-      p.mesh.material.opacity = 1 - p.life / p.max;
-      return true;
-    });
+  // 在 #stage 内生成一个 DOM 飘字（交由 _updateFloaters 随 dt 推进/清理）
+  _spawnFloater(wx, wy, text, crit) {
+    if (this._floaters.length > 40) return;            // 上限保险丝
+    const stage = document.getElementById('stage');
+    if (!stage) return;
+    const el = document.createElement('div');
+    el.className = 'dmg-num' + (crit ? ' crit' : '');
+    el.textContent = crit ? '暴 ' + text : text;
+    // 世界坐标 → stage 内像素（考虑 canvas 实际显示缩放）
+    const canvas = this.renderer.domElement;
+    const scale = canvas.clientWidth ? (canvas.clientWidth / CANVAS_W) : 1;
+    el.style.left = (wx * scale) + 'px';
+    el.style.top = (wy * scale) + 'px';
+    stage.appendChild(el);
+    this._floaters.push({ el, life: 0, max: 0.7 });
   }
 
   _win() {
@@ -612,6 +882,8 @@ class Game {
 
   destroy() {
     this.container.innerHTML = '';
+    // 释放粒子系统与渲染器，避免泄漏
+    if (this.points) { this.points.geometry.dispose(); this.points.material.dispose(); }
     this.renderer.dispose();
   }
 }

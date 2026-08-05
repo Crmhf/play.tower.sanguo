@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>三国塔防 · Tower of Three Kingdoms</title>
 <link rel="stylesheet" href="css/style.css">
+<!-- 首屏预热：提前把引擎与主背景塞进 HTTP 缓存 -->
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js">
+<link rel="preload" as="image" href="assets/img/backgrounds/menu_bg.webp">
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
@@ -16,17 +19,28 @@
     <div id="loading"><div class="load-track"><div id="load-bar"></div></div><p>正在调兵遣将…</p></div>
     <div id="menu-inner" class="hide">
       <h1 class="game-title">三国塔防</h1>
-      <p class="game-sub">TOWER OF THREE KINGDOMS</p>
+      <p class="game-sub"><span class="deco-line"></span>TOWER OF THREE KINGDOMS<span class="deco-line"></span></p>
+      <!-- 群英荟萃：12 名将剪影横向轮播（复用已加载的立绘，零新增资源） -->
+      <div class="hero-parade" aria-hidden="true">
+        <div class="parade-track">
+          <img src="assets/img/heroes/guanyu.webp" alt=""><img src="assets/img/heroes/zhangfei.webp" alt=""><img src="assets/img/heroes/zhaoyun.webp" alt=""><img src="assets/img/heroes/huangzhong.webp" alt=""><img src="assets/img/heroes/machao.webp" alt=""><img src="assets/img/heroes/zhugeliang.webp" alt=""><img src="assets/img/heroes/simayi.webp" alt=""><img src="assets/img/heroes/dianwei.webp" alt=""><img src="assets/img/heroes/zhoutai.webp" alt=""><img src="assets/img/heroes/diaochan.webp" alt=""><img src="assets/img/heroes/lvbu.webp" alt=""><img src="assets/img/heroes/pangtong.webp" alt="">
+          <img src="assets/img/heroes/guanyu.webp" alt=""><img src="assets/img/heroes/zhangfei.webp" alt=""><img src="assets/img/heroes/zhaoyun.webp" alt=""><img src="assets/img/heroes/huangzhong.webp" alt=""><img src="assets/img/heroes/machao.webp" alt=""><img src="assets/img/heroes/zhugeliang.webp" alt=""><img src="assets/img/heroes/simayi.webp" alt=""><img src="assets/img/heroes/dianwei.webp" alt=""><img src="assets/img/heroes/zhoutai.webp" alt=""><img src="assets/img/heroes/diaochan.webp" alt=""><img src="assets/img/heroes/lvbu.webp" alt=""><img src="assets/img/heroes/pangtong.webp" alt="">
+        </div>
+      </div>
       <button id="btn-start" class="big-btn">进入乱世</button>
       <button id="btn-help" class="help-btn">📖 武将图鉴</button>
       <p class="menu-tip">50 关史诗战役 · 12 名将积分召唤上阵 · 势力羁绊相生相克</p>
     </div>
+    <!-- 底部氛围：暖色地平线 + 滚动战役导语 -->
+    <div class="menu-aurora" aria-hidden="true"></div>
+    <div class="menu-marquee" aria-hidden="true"><span>滚滚长江东逝水 · 浪花淘尽英雄 · 是非成败转头空 · 青山依旧在 · 几度夕阳红 · 白发渔樵江渚上 · 惯看秋月春风 · 一壶浊酒喜相逢 · 古今多少事 · 都付笑谈中 ·&nbsp;</span><span>滚滚长江东逝水 · 浪花淘尽英雄 · 是非成败转头空 · 青山依旧在 · 几度夕阳红 · 白发渔樵江渚上 · 惯看秋月春风 · 一壶浊酒喜相逢 · 古今多少事 · 都付笑谈中 ·&nbsp;</span></div>
     <button id="btn-mute" class="mute-btn">🔊</button>
   </section>
 
   <!-- 选关 -->
   <section id="screen-levels" class="screen">
     <h2 class="screen-title">选择关卡</h2>
+    <div class="campaign-bar" id="campaign-bar"></div>
     <button id="btn-help2" class="help-btn">📖 武将图鉴</button>
     <div id="level-grid"></div>
   </section>
@@ -47,6 +61,7 @@
 
     <div id="stage-wrap">
       <div id="stage"></div>
+      <div id="hurt-flash"></div>
       <div id="toast"></div>
 
       <div id="build-wheel"></div>
@@ -87,15 +102,15 @@
   </div>
 </div>
 
-<script src="js/heroes.js?v=4"></script>
-<script src="js/enemies.js?v=4"></script>
-<script src="js/levels.js?v=4"></script>
-<script src="js/tech.js?v=4"></script>
-<script src="js/synergy.js?v=4"></script>
-<script src="js/assets.js?v=4"></script>
-<script src="js/audio.js?v=4"></script>
-<script src="js/ui.js?v=4"></script>
-<script src="js/game.js?v=4"></script>
-<script src="js/main.js?v=4"></script>
+<script src="js/heroes.js?v=5"></script>
+<script src="js/enemies.js?v=5"></script>
+<script src="js/levels.js?v=5"></script>
+<script src="js/tech.js?v=5"></script>
+<script src="js/synergy.js?v=5"></script>
+<script src="js/assets.js?v=5"></script>
+<script src="js/audio.js?v=5"></script>
+<script src="js/ui.js?v=5"></script>
+<script src="js/game.js?v=5"></script>
+<script src="js/main.js?v=5"></script>
 </body>
 </html>

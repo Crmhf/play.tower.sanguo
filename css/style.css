@@ -1,4 +1,14 @@
 /* 三国塔防 · 全局样式 */
+/* 金色描边/发光统一色板：按现有实际色阶一一定义，消除散落近似金（不改变现有色相） */
+:root{
+  --gold-text:#ffd98a;   /* 文字/描边主金 */
+  --gold-dim:#c9b48a;    /* 次要金 */
+  --gold-line:#6a5a35;   /* 边框深金 */
+  --gold-grad:#e8a93a;   /* 渐变金 */
+  --gold-1:#ffe9b0; --gold-2:#f0c35c; --gold-3:#d8a93a; --gold-4:#8a6f3f;
+  --ink:#0b0f1a; --panel-1:#2c3550; --panel-2:#1c2333;
+  --glow-gold:0 0 18px rgba(255,170,60,.5);
+}
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
 html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFang SC","Microsoft YaHei",serif; overflow:hidden; }
 #app { height:100vh; }
@@ -7,8 +17,12 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .screen.active { display:flex; }
 
 /* ---------- 主菜单 ---------- */
-.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.webp') center/cover; filter:brightness(.55); z-index:-1; }
-#screen-menu { justify-content:center; }
+#screen-menu { justify-content:center; overflow:hidden; inset:0; }
+.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.webp') center/cover; filter:brightness(.72) saturate(1.1); z-index:0; }
+/* 菜单背景上的暗角渐变，增强层次又不至于全黑 */
+.menu-bg::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 42%, rgba(0,0,0,0) 30%, rgba(6,8,16,.55) 78%, rgba(6,8,16,.9) 100%); }
+#menu-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
+#loading { position:relative; z-index:2; }
 .game-title { font-size:88px; letter-spacing:12px; color:#ffd98a; text-shadow:0 0 30px #ff8c00,0 4px 8px #000; font-weight:900; }
 .game-sub { letter-spacing:6px; color:#c9b48a; margin:14px 0 40px; }
 .big-btn { background:linear-gradient(180deg,#e8a93a,#b06a12); border:2px solid #ffd98a; color:#fff8ea; font-size:24px; padding:14px 54px; border-radius:10px; cursor:pointer; box-shadow:0 0 24px rgba(255,150,40,.5); transition:.2s; }
@@ -129,3 +143,152 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .syn-buff { border-color:#3a7a4a; } .syn-buff .syn-h { color:#7ee08a; }
 .syn-nerf { border-color:#8a3a3a; } .syn-nerf .syn-h { color:#ff8a8a; }
 .syn-none { border-color:#5a5a6a; } .syn-none .syn-h { color:#b9c0d8; }
+
+/* ================================================================
+   v5 · 界面氛围与打击感美化
+   ================================================================ */
+
+/* ---- 通用金色描边大标题（选关等次级页共用） ---- */
+.screen-title { font-size:44px; font-weight:900; letter-spacing:10px; margin:34px 0 6px;
+  background:linear-gradient(180deg,#ffe9b0 0%,#f0c35c 45%,#b97a1e 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:0 2px 10px rgba(0,0,0,.6); }
+
+/* ---- 主菜单：标题呼吸金光 + 副标题印章分隔线 ---- */
+.game-title { animation:titleGlow 3.2s ease-in-out infinite; }
+@keyframes titleGlow {
+  0%,100% { text-shadow:0 0 30px #ff8c00,0 4px 8px #000; }
+  50%     { text-shadow:0 0 46px #ffb347,0 0 18px #ff8c00,0 4px 8px #000; }
+}
+.game-sub { display:flex; align-items:center; gap:14px; }
+.game-sub .deco-line { display:inline-block; width:64px; height:1px;
+  background:linear-gradient(90deg,transparent,#c9b48a); }
+.game-sub .deco-line:last-child { background:linear-gradient(90deg,#c9b48a,transparent); }
+
+/* ---- 主菜单：名将剪影横向轮播 ---- */
+.hero-parade { width:min(760px,92vw); overflow:hidden; margin:6px 0 26px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent); }
+.parade-track { display:flex; gap:18px; width:max-content; animation:paradeScroll 36s linear infinite; }
+.parade-track img { width:64px; height:64px; object-fit:cover; border-radius:8px;
+  filter:brightness(.35) contrast(1.1); opacity:.55; }
+@keyframes paradeScroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+
+/* ---- 主菜单：底部暖色地平线 + 滚动战役导语 ---- */
+.menu-aurora { position:absolute; bottom:0; left:0; width:100%; height:180px; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg,transparent, rgba(255,120,30,.10) 55%, rgba(255,150,50,.16)); }
+.menu-marquee { position:absolute; bottom:14px; left:0; width:100%; overflow:hidden; z-index:1; pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent); }
+.menu-marquee span { display:inline-block; white-space:nowrap; color:rgba(255,217,138,.4);
+  font-size:15px; letter-spacing:4px; animation:mscroll 46s linear infinite; }
+@keyframes mscroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+
+/* ---- 主按钮/出兵按钮/科技卡：鎏金高光 + 悬浮浮起 ---- */
+.big-btn { box-shadow:inset 0 1px 0 rgba(255,240,200,.5), inset 0 -3px 6px rgba(120,60,0,.4), 0 0 24px rgba(255,150,40,.5), 0 4px 10px rgba(0,0,0,.45); }
+.big-btn:hover { transform:translateY(-2px) scale(1.05); }
+.wave-btn { box-shadow:inset 0 1px 0 rgba(255,200,200,.35), inset 0 -3px 6px rgba(60,0,0,.5), 0 4px 12px rgba(0,0,0,.5); }
+.tech-card { box-shadow:inset 0 1px 0 rgba(255,230,170,.12), 0 2px 6px rgba(0,0,0,.4); }
+
+/* ---- HUD：金色下划光边 + 数据金光 ---- */
+#hud { background:linear-gradient(180deg, rgba(20,25,42,.92), rgba(10,12,20,.88));
+  border-bottom:none; box-shadow:0 1px 0 rgba(216,169,58,.55), 0 4px 14px rgba(0,0,0,.5); }
+.hud-item b { color:var(--gold-text); text-shadow:0 0 8px rgba(255,190,80,.5); }
+
+/* ---- 描金卷轴：结算框 / 图鉴框 / 升级面板 / 轮盘项 统一语言 ---- */
+.result-box, .help-box {
+  border:1px solid var(--gold-line);
+  outline:1px solid rgba(216,169,58,.35); outline-offset:-4px;
+  box-shadow:inset 0 1px 0 rgba(255,230,170,.12), 0 8px 30px rgba(0,0,0,.6); }
+#upgrade-panel { border-color:#8a6f3f; box-shadow:inset 0 1px 0 rgba(255,230,170,.12), 0 6px 20px rgba(0,0,0,.5); }
+.wheel-item { border-color:#8a6f3f; box-shadow:inset 0 1px 0 rgba(255,230,170,.1), 0 2px 6px rgba(0,0,0,.4); }
+
+/* ---- 结算弹窗：进场动画 + 胜利金光 ---- */
+#result.show .result-box { animation:popIn .45s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes popIn { from { opacity:0; transform:scale(.88) translateY(18px); } to { opacity:1; transform:scale(1) translateY(0); } }
+#result-title.win { animation:winShine 2.4s linear infinite; }
+@keyframes winShine {
+  0%,100% { text-shadow:0 0 24px #ff8c00; }
+  50%     { text-shadow:0 0 40px #ffb347,0 0 16px #ff8c00; }
+}
+
+/* ---- 图鉴卡片：收藏卡质感 ---- */
+.help-card { border:1px solid var(--gold-line);
+  box-shadow:inset 0 1px 0 rgba(255,230,170,.1), 0 2px 6px rgba(0,0,0,.4);
+  transition:transform .15s, box-shadow .15s; }
+.help-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(255,170,60,.25); border-color:var(--gold-text); }
+.help-card img { box-shadow:inset 0 0 0 1px rgba(216,169,58,.3); }
+
+/* ---- 基地受击红屏脉冲 ---- */
+#hurt-flash { position:absolute; inset:0; pointer-events:none; opacity:0; z-index:7;
+  background:radial-gradient(ellipse at center, transparent 52%, rgba(200,30,30,.55) 100%); }
+
+/* ---- 伤害飘字（暴击金色大字 / 普通白字） ---- */
+.dmg-num { position:absolute; z-index:8; pointer-events:none; font-weight:900;
+  transform:translate(-50%,-50%); color:#fff; font-size:15px; text-shadow:0 1px 2px #000; }
+.dmg-num.crit { color:#ffd98a; font-size:24px; text-shadow:0 0 10px #ff8c00,0 2px 3px #000; }
+
+/* ---- Boss 出场横幅 ---- */
+.boss-banner { position:absolute; top:14%; left:50%; transform:translateX(-50%); z-index:9;
+  pointer-events:none; font-size:40px; font-weight:900; letter-spacing:8px; color:#ff5b5b;
+  text-shadow:0 0 24px #c0392b,0 3px 6px #000; opacity:0; }
+.boss-banner.show { animation:bossIn 1.8s ease both; }
+@keyframes bossIn { 0%{opacity:0;transform:translateX(-50%) scale(.7);} 15%{opacity:1;transform:translateX(-50%) scale(1.06);} 25%{transform:translateX(-50%) scale(1);} 80%{opacity:1;} 100%{opacity:0;} }
+
+/* ---- 选关页：氛围背景 + 战役进度条 ---- */
+#screen-levels { background:radial-gradient(ellipse at 50% 0%,#1a2133,#0b0f1a 70%); overflow-y:auto; }
+.campaign-bar { display:flex; align-items:center; gap:8px; margin:6px 0 4px; }
+.campaign-label { font-size:14px; color:var(--gold-dim); letter-spacing:2px; margin-right:6px; }
+.campaign-seg { height:8px; flex:1; max-width:120px; border-radius:5px; background:#1c2333;
+  border:1px solid #3a3120; cursor:pointer; position:relative; transition:.15s; }
+.campaign-seg .fill { position:absolute; inset:0; border-radius:5px; transform-origin:left; }
+.campaign-seg:hover { transform:scaleY(1.5); border-color:var(--gold-text); }
+
+/* ---- 选关：章节块 + 章节头 ---- */
+#level-grid { display:block; padding:0 20px 60px; max-width:720px; }
+.chapter-block { margin-top:22px; }
+.chapter-head { display:flex; align-items:baseline; gap:12px; margin-bottom:10px;
+  border-left:4px solid var(--gold-line); padding-left:12px; }
+.chapter-name { font-size:20px; font-weight:800; color:var(--gold-text); letter-spacing:2px; }
+.chapter-terrain { font-size:12px; color:#8fd8ff; border:1px solid #3a5a7a; border-radius:5px; padding:1px 8px; }
+.chapter-reward { font-size:12px; color:var(--gold-dim); margin-left:auto; }
+.chapter-cells { display:grid; grid-template-columns:repeat(10,58px); gap:10px; }
+
+/* 章节主题配色（边框/微底色，与战斗 lv.bg 地形呼应） */
+.chapter-block[data-chap='0'] .chapter-head { border-left-color:#c9a227; }
+.chapter-block[data-chap='1'] .chapter-head { border-left-color:#4a9a4a; }
+.chapter-block[data-chap='2'] .chapter-head { border-left-color:#4a8ad0; }
+.chapter-block[data-chap='3'] .chapter-head { border-left-color:#d06a3a; }
+.chapter-block[data-chap='4'] .chapter-head { border-left-color:#aac8e8; }
+.chapter-block[data-chap='0'] .level-cell { border-color:rgba(201,162,39,.55); }
+.chapter-block[data-chap='1'] .level-cell { border-color:rgba(74,154,74,.55); }
+.chapter-block[data-chap='2'] .level-cell { border-color:rgba(74,138,208,.55); }
+.chapter-block[data-chap='3'] .level-cell { border-color:rgba(208,106,58,.55); }
+.chapter-block[data-chap='4'] .level-cell { border-color:rgba(170,200,232,.55); }
+
+/* ---- 选关格子：铜牌立体化 + 星级 + 悬停信息卡 ---- */
+.cell-wrap { position:relative; }
+.level-cell { position:relative; font-size:19px; font-weight:800; color:#ffe6a8;
+  text-shadow:0 1px 1px #000,0 0 8px rgba(255,190,80,.45);
+  background:linear-gradient(180deg,#2c3550,#1a2133);
+  box-shadow:inset 0 1px 0 rgba(255,230,170,.15), inset 0 -3px 6px rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.4);
+  transition:transform .15s, box-shadow .15s; }
+.level-cell:hover:not(.locked) { transform:translateY(-5px) scale(1.08);
+  box-shadow:inset 0 1px 0 rgba(255,230,170,.25), 0 8px 18px rgba(255,170,60,.3); }
+.level-cell.locked { background:#14171f; box-shadow:none; text-shadow:none; }
+.level-cell .stars { position:absolute; bottom:2px; left:0; right:0; font-size:9px; color:var(--gold-text);
+  text-shadow:0 0 4px #ff8c00; letter-spacing:1px; }
+.cell-tip { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) scale(.9);
+  min-width:150px; background:rgba(12,15,24,.97); border:1px solid var(--gold-line); border-radius:10px;
+  padding:9px 12px; font-size:12px; color:#e8e0cf; text-align:left; z-index:20; opacity:0;
+  pointer-events:none; transition:.15s; box-shadow:0 6px 20px rgba(0,0,0,.6); }
+.cell-wrap:hover .cell-tip { opacity:1; transform:translateX(-50%) scale(1); }
+.cell-tip .ct-name { color:var(--gold-text); font-weight:700; margin-bottom:3px; }
+.cell-tip .ct-line { color:#b9ad8f; line-height:1.5; }
+.cell-tip .ct-boss { color:#ff8a8a; font-weight:700; }
+
+/* 降低动效偏好：关闭所有无限动画 */
+@media (prefers-reduced-motion: reduce) {
+  .game-title, .parade-track, .menu-marquee span, #result-title.win { animation:none !important; }
+}
+
