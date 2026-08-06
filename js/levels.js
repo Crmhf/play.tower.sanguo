@@ -29,13 +29,13 @@ const CHAPTERS = [
 ];
 
 const BG_IMG = {
-  menu:'assets/img/backgrounds/menu_bg.webp',
-  plain:'assets/img/backgrounds/bg_plain.webp',
-  forest:'assets/img/backgrounds/bg_forest.webp',
-  river:'assets/img/backgrounds/bg_river.webp',
-  snow:'assets/img/backgrounds/bg_snow.webp',
-  volcano:'assets/img/backgrounds/bg_volcano.webp',
-  boss:'assets/img/backgrounds/bg_boss.webp'
+  menu:'assets/img/backgrounds/menu_bg_v2.webp',
+  plain:'assets/img/backgrounds/bg_plain_v2.webp',
+  forest:'assets/img/backgrounds/bg_forest_v2.webp',
+  river:'assets/img/backgrounds/bg_river_v2.webp',
+  snow:'assets/img/backgrounds/bg_snow_v2.webp',
+  volcano:'assets/img/backgrounds/bg_volcano_v2.webp',
+  boss:'assets/img/backgrounds/bg_boss_v2.webp'
 };
 
 // 每 10 关的章节 Boss

@@ -140,35 +140,44 @@ const UI = {
     grid.innerHTML = '';
     if (tab === 'hero') {
       const curFac = (typeof App !== 'undefined' && App.faction) || null;
-      // 势力筛选（当前势力在前优先展示）
-      const keys = curFac
-        ? [...heroesByFaction(curFac), ...HERO_KEYS.filter(k => HEROES[k].faction !== curFac)]
-        : HERO_KEYS;
-      keys.forEach(k => {
-        const h = HEROES[k];
-        const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
-        const l1 = h.levels[0], l3 = h.levels[2];
-        const card = document.createElement('div');
-        card.className = 'help-card' + (curFac && h.faction !== curFac ? ' dim' : '');
-        card.innerHTML = `
-          <img src="${h.img}" onerror="this.style.display='none'">
-          <div class="hc-title" style="color:${h.color}">${h.name} · ${h.title}</div>
-          <div class="hc-role"><span class="fac-tag" style="background:${f.color}">${f.name}</span> ${h.role}　召唤 💰${h.cost}</div>
-          <div class="hc-line">伤害 ${l1.damage}→${l3.damage}　射程 ${l1.range}→${l3.range}</div>
-          <div class="hc-line">攻速 ${l1.rate}→${l3.rate}/秒</div>
-          <div class="hc-trait">✦ ${h.passive.text}</div>
-          <div class="hc-desc">${h.desc}</div>`;
-        grid.appendChild(card);
+      // 按势力分组展示（当前势力在前），每组带势力标题
+      const order = curFac
+        ? [curFac, ...Object.keys(FACTIONS).filter(f => f !== curFac)]
+        : Object.keys(FACTIONS);
+      order.forEach(fac => {
+        const fm = FACTIONS[fac];
+        const head = document.createElement('div');
+        head.className = 'help-fac-head' + (curFac && fac !== curFac ? ' dim' : '');
+        head.innerHTML = `<span class="hf-dot" style="background:${fm.color}"></span>${fm.name}军 <span class="hf-n">${heroesByFaction(fac).length}将</span>`;
+        grid.appendChild(head);
+        heroesByFaction(fac).forEach(k => {
+          const h = HEROES[k];
+          const f = FACTIONS[h.faction] || { name:'?', color:'#888' };
+          const am = ARCHETYPES[h.archetype] || { icon:'', name:'' };
+          const l1 = h.levels[0], l3 = h.levels[2];
+          const card = document.createElement('div');
+          card.className = 'help-card' + (curFac && h.faction !== curFac ? ' dim' : '');
+          card.style.setProperty('--fac', f.color);
+          card.innerHTML = `
+            <div class="hc-imgwrap"><img src="${h.img}" onerror="this.style.display='none'">
+              <span class="hc-arch">${am.icon}</span></div>
+            <div class="hc-title" style="color:${h.color}">${h.name}</div>
+            <div class="hc-sub">${h.title} · ${am.name}</div>
+            <div class="hc-cost">💰${h.cost}</div>
+            <div class="hc-stats"><span>伤 ${l1.damage}<i>→${l3.damage}</i></span><span>程 ${l1.range}<i>→${l3.range}</i></span><span>速 ${l1.rate}<i>→${l3.rate}</i></span></div>
+            <div class="hc-trait">✦ ${h.passive.text}</div>`;
+          grid.appendChild(card);
+        });
       });
     } else if (tab === 'enemy') {
       Object.values(ENEMIES).forEach(e => {
         const card = document.createElement('div');
         card.className = 'help-card enemy';
         card.innerHTML = `
-          <img src="${e.img}" onerror="this.style.display='none'">
+          <div class="hc-imgwrap"><img src="${e.img}" onerror="this.style.display='none'"></div>
           <div class="hc-title">${e.name}${e.boss ? ' <span class="boss-tag">BOSS</span>' : ''}</div>
-          <div class="hc-role">击杀金币 💰${e.score}</div>
-          <div class="hc-line">血量 ${e.hp}　速度 ${e.speed}　护甲 ${e.armor}</div>
+          <div class="hc-cost">💰${e.score}</div>
+          <div class="hc-stats"><span>血 ${e.hp}</span><span>速 ${e.speed}</span><span>甲 ${e.armor}</span></div>
           <div class="hc-desc">${e.ability || ''}</div>`;
         grid.appendChild(card);
       });

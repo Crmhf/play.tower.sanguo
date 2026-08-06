@@ -18,7 +18,7 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 
 /* ---------- 主菜单 ---------- */
 #screen-menu { justify-content:center; overflow:hidden; inset:0; }
-.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg.webp') center/cover; filter:brightness(.72) saturate(1.1); z-index:0; }
+.menu-bg { position:absolute; inset:0; background:url('../assets/img/backgrounds/menu_bg_v2.webp') center/cover; filter:brightness(.72) saturate(1.1); z-index:0; }
 /* 菜单背景上的暗角渐变，增强层次又不至于全黑 */
 .menu-bg::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 42%, rgba(0,0,0,0) 30%, rgba(6,8,16,.55) 78%, rgba(6,8,16,.9) 100%); }
 #menu-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
@@ -138,20 +138,33 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .help-tab.active { background:#3a4560; color:#ffd98a; border-color:#ffd98a; }
 #help-close { background:#4a3030; border:1px solid #a06a6a; color:#ffb0b0; font-size:18px; width:38px; height:38px; border-radius:8px; cursor:pointer; }
 .help-tip { font-size:13px; color:#a89a7a; margin-bottom:14px; line-height:1.5; }
-#help-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; overflow-y:auto; padding-right:4px; }
-.help-card { background:rgba(15,18,28,.9); border:1px solid #4a4030; border-radius:12px; padding:12px; text-align:center; }
-/* 立绘提亮增对比 + 古风亮底衬托（去底后立绘偏暗，需提亮才能在深底上凸显） */
-.help-card img { width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px;
+#help-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; overflow-y:auto; padding-right:4px; }
+/* 势力分组标题 */
+.help-fac-head { grid-column:1/-1; display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800;
+  color:#ffd98a; letter-spacing:3px; margin:8px 0 2px; padding-bottom:4px; border-bottom:1px solid #4a4030; }
+.help-fac-head.dim { opacity:.5; }
+.hf-dot { width:14px; height:14px; border-radius:50%; border:1px solid #000; }
+.hf-n { font-size:12px; color:#9a8f75; font-weight:400; letter-spacing:1px; }
+/* 武将卡：势力色描边 + 立绘提亮 */
+.help-card { position:relative; background:linear-gradient(180deg,rgba(24,28,44,.95),rgba(13,16,26,.95));
+  border:1px solid #4a4030; border-top:2px solid var(--fac,#6a5a35); border-radius:12px; padding:10px 10px 12px; text-align:center; transition:.15s; }
+.help-card:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.5); border-color:var(--fac,#ffd98a); }
+.help-card.dim { opacity:.5; }
+.hc-imgwrap { position:relative; }
+.help-card img { width:100%; height:108px; object-fit:cover; border-radius:8px; margin-bottom:8px;
   background:radial-gradient(ellipse at 50% 38%, #4a4030 0%, #2a2418 55%, #17130c 100%);
   filter:brightness(1.5) contrast(1.18) saturate(1.12);
   box-shadow:inset 0 0 0 1px rgba(216,169,58,.35), inset 0 -14px 24px rgba(0,0,0,.4); }
-/* 怪物立绘同样提亮 */
 .help-card.enemy img { filter:brightness(1.35) contrast(1.15) saturate(1.1); }
-.hc-title { font-size:17px; font-weight:700; color:#ffd98a; margin-bottom:4px; }
-.hc-role { font-size:12px; color:#8fd8ff; margin-bottom:6px; }
-.hc-line { font-size:12px; color:#b9ad8f; line-height:1.5; }
-.hc-trait { font-size:12px; color:#7ee08a; margin-top:6px; }
-.hc-desc { font-size:11px; color:#9a8f75; margin-top:6px; line-height:1.4; }
+.hc-arch { position:absolute; top:4px; right:4px; font-size:15px; background:rgba(0,0,0,.55); border-radius:6px; padding:2px 5px; }
+.hc-title { font-size:18px; font-weight:900; color:#ffd98a; letter-spacing:1px; }
+.hc-sub { font-size:11px; color:#8fd8ff; margin:1px 0 6px; }
+.hc-cost { display:inline-block; font-size:13px; font-weight:700; color:#ffd98a; background:rgba(216,169,58,.14);
+  border:1px solid #6a5a35; border-radius:6px; padding:1px 10px; margin-bottom:8px; }
+.hc-stats { display:flex; justify-content:space-between; font-size:11px; color:#b9ad8f; margin-bottom:6px; }
+.hc-stats i { color:#7ee08a; font-style:normal; }
+.hc-trait { font-size:11px; color:#7ee08a; line-height:1.4; border-top:1px dashed #3a3120; padding-top:6px; }
+.hc-desc { font-size:10px; color:#9a8f75; margin-top:6px; line-height:1.4; }
 .help-card.enemy .hc-title { color:#ff9a8a; }
 .help-card.dim { opacity:.55; }
 .boss-tag { font-size:10px; background:#c0392b; color:#fff; border-radius:4px; padding:1px 5px; vertical-align:middle; }
@@ -277,7 +290,7 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 
 /* ---- 选关：章节块 + 章节头 ---- */
 #level-grid { display:block; padding:0 20px 60px; max-width:720px; }
-.chapter-block { margin-top:22px; }
+.chapter-block { margin-top:22px; background:rgba(15,19,30,.5); border:1px solid rgba(74,64,48,.5); border-radius:14px; padding:14px 16px; }
 .chapter-head { display:flex; align-items:baseline; gap:12px; margin-bottom:10px;
   border-left:4px solid var(--gold-line); padding-left:12px; }
 .chapter-name { font-size:20px; font-weight:800; color:var(--gold-text); letter-spacing:2px; }
@@ -296,6 +309,7 @@ html,body { height:100%; background:#0b0f1a; color:#e8e0cf; font-family:"PingFan
 .chapter-block[data-chap='2'] .level-cell { border-color:rgba(74,138,208,.55); }
 .chapter-block[data-chap='3'] .level-cell { border-color:rgba(208,106,58,.55); }
 .chapter-block[data-chap='4'] .level-cell { border-color:rgba(170,200,232,.55); }
+/* 章节块卡片化（半透明底 + 圆角），提升层次 */
 
 /* ---- 选关格子：铜牌立体化 + 星级 + 悬停信息卡 ---- */
 .cell-wrap { position:relative; }
